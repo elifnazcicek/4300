@@ -1,0 +1,70 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ApiService {
+  private baseUrl = 'http://localhost:5000/api';
+
+  constructor(private http: HttpClient) {}
+
+  // ==========================================
+  // RECEIPT ENDPOINTS (Görüntü İşleme & OCR)
+  // ==========================================
+
+  // Görseli Gemini'ye gönderip OCR verisi almak
+  scanReceipt(file: File | Blob): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>(`${this.baseUrl}/receipts/upload`, formData);
+  }
+
+  getReceipts(username?: string): Observable<any[]> {
+    const url = username ? `${this.baseUrl}/receipts?username=${encodeURIComponent(username)}` : `${this.baseUrl}/receipts`;
+    return this.http.get<any[]>(url);
+  }
+
+  getReceiptDetails(id: number): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/receipts/${id}`);
+  }
+
+  saveReceipt(receipt: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/receipts`, receipt);
+  }
+
+  updateReceipt(id: number, receipt: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/receipts/${id}`, receipt);
+  }
+
+  // ==========================================================
+  // AUTH ENDPOINTS (Kullanıcı Girişi ve Kayıt)
+  // ==========================================================
+  login(credentials: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/login`, credentials);
+  }
+
+  register(credentials: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/register`, credentials);
+  }
+
+  // ==========================================
+  // LOG ENDPOINTS (Sistem Kayıtları)
+  // ==========================================
+  getLogs(): Observable<string> {
+    return this.http.get(`${this.baseUrl}/logs`, { responseType: 'text' });
+  }
+
+  triggerBackup(): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/logs/backup`, {});
+  }
+
+  getBackups(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/logs/backups`);
+  }
+
+  getBackupContent(filename: string): Observable<string> {
+    return this.http.get(`${this.baseUrl}/logs/backups/${filename}`, { responseType: 'text' });
+  }
+}
