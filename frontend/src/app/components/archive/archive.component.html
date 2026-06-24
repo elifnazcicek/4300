@@ -37,11 +37,13 @@
     <table class="archive-table">
       <thead>
         <tr>
-          <th style="width: 8%;">Fiş No</th>
-          <th style="width: 32%;">Mağaza Adı</th>
-          <th style="width: 15%;">Fiş Tarihi</th>
-          <th style="width: 12%; text-align: right;">KDV Tutarı</th>
-          <th style="width: 15%; text-align: right;">Toplam Tutar</th>
+          <th style="width: 5%;">ID</th>
+          <th style="width: 22%;">Mağaza Adı</th>
+          <th style="width: 12%;">VKN/TCKN</th>
+          <th style="width: 10%;">Fiş Tarihi</th>
+          <th style="width: 10%;">Fiş No</th>
+          <th style="width: 11%; text-align: right;">KDV Tutarı</th>
+          <th style="width: 12%; text-align: right;">Toplam Tutar</th>
           <th style="width: 13%;">Kayıt Tarihi</th>
           <th style="width: 5%; text-align: center;">İşlem</th>
         </tr>
@@ -50,7 +52,9 @@
         <tr *ngFor="let receipt of filteredReceipts">
           <td class="id-cell">#{{ receipt.id }}</td>
           <td class="merchant-cell">{{ receipt.merchantName }}</td>
+          <td>{{ receipt.vknTckn || '-' }}</td>
           <td>{{ receipt.receiptDate }}</td>
+          <td>{{ receipt.receiptNo || '-' }}</td>
           <td class="text-right">{{ receipt.taxAmount | number:'1.2-2' }} TL</td>
           <td class="text-right total-cell">{{ receipt.totalAmount | number:'1.2-2' }} TL</td>
           <td class="date-cell">{{ receipt.createdAt }}</td>

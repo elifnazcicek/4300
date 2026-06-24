@@ -31,14 +31,12 @@ export class DashboardComponent implements OnInit {
   // === MIDDLE PANEL ===
   receiptId: number | null = null;
   merchantName: string = '';
+  vknTckn: string = '';
   receiptDate: string = '';
+  receiptNo: string = '';
   totalAmount: number = 0;
   taxAmount: number = 0;
   imagePath: string | null = null;
-  items: ReceiptItem[] = [];
-  
-  category: string = 'Gıda';
-  paymentMethod: string = 'Nakit';
   
   statusMessage: string = '';
   statusType: 'success' | 'info' | 'error' | null = null;
@@ -92,21 +90,12 @@ export class DashboardComponent implements OnInit {
         next: (res) => {
           // Local backend response mapping
           this.merchantName = res.merchant_name || res.merchantName || '';
+          this.vknTckn = res.vkn_tckn || res.vknTckn || '';
           this.receiptDate = res.receipt_date || res.receiptDate || '';
+          this.receiptNo = res.receipt_no || res.receiptNo || '';
           this.totalAmount = res.total_amount || res.totalAmount || 0;
           this.taxAmount = res.tax_amount || res.taxAmount || 0;
-          this.category = res.category || 'Gıda';
-          this.paymentMethod = res.payment_method || 'Nakit';
           this.imagePath = res.image_path || res.imagePath || null;
-
-          // Load items from local backend response
-          this.items = (res.items || []).map((i: any) => ({
-            itemName: i.item_name || i.itemName || 'Urun Kalemi',
-            quantity: i.quantity || 1,
-            unitPrice: i.unit_price || i.unitPrice || 0,
-            totalPrice: i.total_price || i.totalPrice || 0,
-            taxRate: i.tax_rate || i.taxRate || 20
-          }));
 
           this.showPreview = true;
           this.showStatus('OCR tamamlandı!', 'success');
@@ -131,50 +120,15 @@ export class DashboardComponent implements OnInit {
     this.clearStatus();
   }
 
-  // === SPREADSHEET FORM METHODS ===
-  addItem(): void {
-    this.items.push({
-      itemName: 'Yeni Ürün',
-      quantity: 1,
-      unitPrice: 0,
-      totalPrice: 0,
-      taxRate: 20
-    });
-    this.calculateTotals();
-  }
-
-  removeItem(index: number): void {
-    this.items.splice(index, 1);
-    this.calculateTotals();
-  }
-
-  onItemChange(item: ReceiptItem): void {
-    item.totalPrice = Number((item.quantity * item.unitPrice).toFixed(2));
-    this.calculateTotals();
-  }
-
-  calculateTotals(): void {
-    let total = 0;
-    let tax = 0;
-    this.items.forEach(item => {
-      total += item.totalPrice;
-      const taxPart = item.totalPrice * (item.taxRate / (100 + item.taxRate));
-      tax += taxPart;
-    });
-    this.totalAmount = Number(total.toFixed(2));
-    this.taxAmount = Number(tax.toFixed(2));
-  }
-
   clearForm(): void {
     this.receiptId = null;
     this.merchantName = '';
+    this.vknTckn = '';
     this.receiptDate = new Date().toISOString().substring(0, 10);
+    this.receiptNo = '';
     this.totalAmount = 0;
     this.taxAmount = 0;
-    this.category = 'Gıda';
-    this.paymentMethod = 'Nakit';
     this.imagePath = null;
-    this.items = [];
     this.resetInput();
   }
 
@@ -183,28 +137,20 @@ export class DashboardComponent implements OnInit {
       this.showStatus('Lütfen Mağaza Adını girin.', 'error');
       return;
     }
-    if (this.items.length === 0) {
-      this.showStatus('Lütfen ürün kalemlerini ekleyin.', 'error');
-      return;
-    }
 
     const payload = {
       id: this.receiptId || 0,
       merchantName: this.merchantName,
+      vknTckn: this.vknTckn,
       receiptDate: this.receiptDate,
+      fisNo: this.receiptNo,
       totalAmount: this.totalAmount,
       taxAmount: this.taxAmount,
-      category: this.category,
-      paymentMethod: this.paymentMethod,
+      category: 'Diğer',
+      paymentMethod: 'Nakit',
       imagePath: this.imagePath,
       createdBy: localStorage.getItem('username') || 'default',
-      items: this.items.map(i => ({
-        itemName: i.itemName,
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        totalPrice: i.totalPrice,
-        taxRate: i.taxRate
-      }))
+      items: []
     };
 
     this.showStatus('Kaydediliyor...', 'info');
@@ -268,6 +214,8 @@ export class DashboardComponent implements OnInit {
     this.filteredReceipts = this.receiptsList.filter(r => 
       r.merchantName.toLowerCase().includes(q) ||
       r.receiptDate.toLowerCase().includes(q) ||
+      (r.receiptNo && r.receiptNo.toLowerCase().includes(q)) ||
+      (r.vknTckn && r.vknTckn.toLowerCase().includes(q)) ||
       r.id.toString().includes(q)
     );
   }
@@ -279,20 +227,12 @@ export class DashboardComponent implements OnInit {
       next: (data) => {
         this.receiptId = data.id;
         this.merchantName = data.merchantName;
+        this.vknTckn = data.vknTckn || '';
         this.receiptDate = data.receiptDate;
+        this.receiptNo = data.receiptNo || '';
         this.totalAmount = data.totalAmount;
         this.taxAmount = data.taxAmount;
-        this.category = data.category || 'Gıda';
-        this.paymentMethod = data.paymentMethod || 'Nakit';
         this.imagePath = data.imagePath;
-
-        this.items = data.items.map((i: any) => ({
-          itemName: i.itemName || i.item_name || 'Urun Kalemi',
-          quantity: i.quantity || 1,
-          unitPrice: i.unitPrice || i.unit_price || 0,
-          totalPrice: i.totalPrice || i.total_price || 0,
-          taxRate: i.taxRate || i.tax_rate || 20
-        }));
 
         if (data.imagePath) {
           this.previewUrl = `http://localhost:5000/${data.imagePath}`;
