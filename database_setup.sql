@@ -56,6 +56,7 @@ BEGIN
         [FisNo]             NVARCHAR(50)      NULL,
         [KdvOrani]          INT               NOT NULL DEFAULT 20,
         [ToplamTutar]       DECIMAL(10,2)     NOT NULL,
+        [KdvTutari]         DECIMAL(10,2)     NOT NULL DEFAULT 0.00,
         [KaydedenKullanici] NVARCHAR(50)      NOT NULL,
         [CreatedDate]       DATETIME2(7)      NOT NULL DEFAULT GETDATE(),
         [ItemsJson]         NVARCHAR(MAX)     NULL,
@@ -201,23 +202,46 @@ BEGIN
     IF @ActualBackupFolder IS NULL OR @ActualBackupFolder = ''
         SET @ActualBackupFolder = 'C:\Backup';
     
-    -- Klasör yoksa oluştur (Gerekli yetkiler olmalıdır)
-    EXEC master.dbo.xp_create_subdir @ActualBackupFolder;
-    
-    -- Tarih formatı: YYYY_MM_DD
-    SET @DateStr = REPLACE(CONVERT(NVARCHAR(10), GETDATE(), 111), '/', '_');
-    SET @FileName = CONCAT(@ActualBackupFolder, '\yedek_', @DateStr, '.bak');
-    
-    -- Yedekleme komutunu çalıştır
-    BACKUP DATABASE ReceiptOcrDb
-    TO DISK = @FileName
-    WITH FORMAT, INIT, NAME = N'ReceiptOcrDb-Daily Full Backup', SKIP, NOREWIND, NOUNLOAD, STATS = 10;
-    
-    -- Yedekleme işlemini log tablosuna kaydet
-    INSERT INTO dbo.SystemLogs (Username, ActionType, [Status], Details)
-    VALUES ('System_Job', 'Db_Backup', 'SUCCESS', CONCAT('Veritabanı yedeği başarıyla alındı: ', @FileName));
-    
-    PRINT CONCAT('Yedekleme tamamlandı: ', @FileName);
+    BEGIN TRY
+        -- Klasör yoksa oluştur (Gerekli yetkiler olmalıdır)
+        EXEC master.dbo.xp_create_subdir @ActualBackupFolder;
+        
+        -- Tarih formatı: YYYY_MM_DD
+        SET @DateStr = REPLACE(CONVERT(NVARCHAR(10), GETDATE(), 111), '/', '_');
+        SET @FileName = CONCAT(@ActualBackupFolder, '\yedek_', @DateStr, '.bak');
+        
+        -- Yedekleme komutunu çalıştır
+        BACKUP DATABASE ReceiptOcrDb
+        TO DISK = @FileName
+        WITH FORMAT, INIT, NAME = N'ReceiptOcrDb-Daily Full Backup', SKIP, NOREWIND, NOUNLOAD, STATS = 10;
+        
+        -- Yedekleme işlemini log tablosuna kaydet
+        INSERT INTO dbo.SystemLogs (Username, ActionType, [Status], Details)
+        VALUES ('System_Job', 'Db_Backup', 'SUCCESS', CONCAT('Veritabanı yedeği başarıyla alındı: ', @FileName));
+        
+        PRINT CONCAT('Yedekleme tamamlandı: ', @FileName);
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorNumber INT = ERROR_NUMBER();
+        DECLARE @Details NVARCHAR(MAX);
+        
+        IF @ErrorMessage LIKE '%Access is denied%' OR @ErrorMessage LIKE '%yetki%' OR @ErrorMessage LIKE '%permission%'
+        BEGIN
+            SET @Details = CONCAT('Yedekleme dizinine erişim yetkisi reddedildi (Access Denied). Yedekleme klasörünün SQL Server servis hesabına yazma yetkisi verdiğinden emin olun. Hata: ', @ErrorMessage);
+        END
+        ELSE
+        BEGIN
+            SET @Details = CONCAT('Yedekleme hatası. Hata No: ', @ErrorNumber, ', Mesaj: ', @ErrorMessage);
+        END
+        
+        -- Hata durumunu log tablosuna kaydet
+        INSERT INTO dbo.SystemLogs (Username, ActionType, [Status], Details)
+        VALUES ('System_Job', 'Db_Backup', 'ERROR', @Details);
+        
+        PRINT @Details;
+        THROW;
+    END CATCH
 END;
 GO
 
