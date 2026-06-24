@@ -5,15 +5,15 @@
 -- =======================================================
 
 -- 1. Veritabanını oluştur (Eğer yoksa)
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ReceiptOcrDb')
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ReceiptOcrDb_New')
 BEGIN
-    CREATE DATABASE ReceiptOcrDb;
-    PRINT 'ReceiptOcrDb veritabanı başarıyla oluşturuldu.';
+    CREATE DATABASE ReceiptOcrDb_New;
+    PRINT 'ReceiptOcrDb_New veritabanı başarıyla oluşturuldu.';
 END
 GO
 
 -- Veritabanını aktif et
-USE ReceiptOcrDb;
+USE ReceiptOcrDb_New;
 GO
 
 -- =======================================================
@@ -144,7 +144,7 @@ GO
 -- SAKLI YORDAMLAR (STORED PROCEDURES)
 -- =======================================================
 
-USE ReceiptOcrDb;
+USE ReceiptOcrDb_New;
 GO
 
 -- 1. Ayarlardan Okuma Yapan Eski Log Temizleme Prosedürü
@@ -211,9 +211,9 @@ BEGIN
         SET @FileName = CONCAT(@ActualBackupFolder, '\yedek_', @DateStr, '.bak');
         
         -- Yedekleme komutunu çalıştır
-        BACKUP DATABASE ReceiptOcrDb
+        BACKUP DATABASE ReceiptOcrDb_New
         TO DISK = @FileName
-        WITH FORMAT, INIT, NAME = N'ReceiptOcrDb-Daily Full Backup', SKIP, NOREWIND, NOUNLOAD, STATS = 10;
+        WITH FORMAT, INIT, NAME = N'ReceiptOcrDb_New-Daily Full Backup', SKIP, NOREWIND, NOUNLOAD, STATS = 10;
         
         -- Yedekleme işlemini log tablosuna kaydet
         INSERT INTO dbo.SystemLogs (Username, ActionType, [Status], Details)
@@ -256,25 +256,25 @@ USE msdb;
 GO
 
 -- 1. GÜNLÜK YEDEKLEME JOB'I (Her gün gece 00:00'da çalışır)
-IF EXISTS (SELECT job_id FROM msdb.dbo.sysjobs WHERE name = N'ReceiptOcrDb_DailyBackup')
-    EXEC msdb.dbo.sp_delete_job @job_name = N'ReceiptOcrDb_DailyBackup', @delete_unused_schedule = 1;
+IF EXISTS (SELECT job_id FROM msdb.dbo.sysjobs WHERE name = N'ReceiptOcrDb_New_DailyBackup')
+    EXEC msdb.dbo.sp_delete_job @job_name = N'ReceiptOcrDb_New_DailyBackup', @delete_unused_schedule = 1;
 GO
 
 -- Job Oluştur
 EXEC msdb.dbo.sp_add_job 
-    @job_name = N'ReceiptOcrDb_DailyBackup', 
+    @job_name = N'ReceiptOcrDb_New_DailyBackup', 
     @enabled = 1, 
-    @description = N'ReceiptOcrDb veritabanının günlük yedeklemesini yapar.', 
+    @description = N'ReceiptOcrDb_New veritabanının günlük yedeklemesini yapar.', 
     @category_name = N'Database Maintenance';
 GO
 
 -- Job Adımı Ekle (Parametresiz çağırarak Ayarlar tablosundan okutuyoruz)
 EXEC msdb.dbo.sp_add_jobstep 
-    @job_name = N'ReceiptOcrDb_DailyBackup', 
+    @job_name = N'ReceiptOcrDb_New_DailyBackup', 
     @step_name = N'Execute Backup Stored Procedure', 
     @subsystem = N'TSQL', 
     @command = N'EXEC sp_BackupDatabase;', 
-    @database_name = N'ReceiptOcrDb';
+    @database_name = N'ReceiptOcrDb_New';
 GO
 
 -- Zamanlama (Schedule) Tanımla: Her gün saat 00:00:00
@@ -287,24 +287,24 @@ GO
 
 -- Zamanlamayı Job'a Bağla
 EXEC msdb.dbo.sp_attach_schedule 
-    @job_name = N'ReceiptOcrDb_DailyBackup', 
+    @job_name = N'ReceiptOcrDb_New_DailyBackup', 
     @schedule_name = N'Daily_Midnight_Backup';
 GO
 
 -- İşi Hedef Sunucuya (Local) Ekle
 EXEC msdb.dbo.sp_add_jobserver 
-    @job_name = N'ReceiptOcrDb_DailyBackup', 
+    @job_name = N'ReceiptOcrDb_New_DailyBackup', 
     @server_name = N'(local)';
 GO
 
 -- 2. GÜNLÜK ESKİ LOG TEMİZLEME JOB'I (Her gün gece 01:00'de çalışır)
-IF EXISTS (SELECT job_id FROM msdb.dbo.sysjobs WHERE name = N'ReceiptOcrDb_DailyCleanup')
-    EXEC msdb.dbo.sp_delete_job @job_name = N'ReceiptOcrDb_DailyCleanup', @delete_unused_schedule = 1;
+IF EXISTS (SELECT job_id FROM msdb.dbo.sysjobs WHERE name = N'ReceiptOcrDb_New_DailyCleanup')
+    EXEC msdb.dbo.sp_delete_job @job_name = N'ReceiptOcrDb_New_DailyCleanup', @delete_unused_schedule = 1;
 GO
 
 -- Job Oluştur
 EXEC msdb.dbo.sp_add_job 
-    @job_name = N'ReceiptOcrDb_DailyCleanup', 
+    @job_name = N'ReceiptOcrDb_New_DailyCleanup', 
     @enabled = 1, 
     @description = N'365 günü aşan eski log kayıtlarını temizler.', 
     @category_name = N'Database Maintenance';
@@ -312,11 +312,11 @@ GO
 
 -- Job Adımı Ekle
 EXEC msdb.dbo.sp_add_jobstep 
-    @job_name = N'ReceiptOcrDb_DailyCleanup', 
+    @job_name = N'ReceiptOcrDb_New_DailyCleanup', 
     @step_name = N'Execute CleanOldLogs Stored Procedure', 
     @subsystem = N'TSQL', 
     @command = N'EXEC sp_CleanOldLogs;', 
-    @database_name = N'ReceiptOcrDb';
+    @database_name = N'ReceiptOcrDb_New';
 GO
 
 -- Zamanlama Tanımla: Her gün saat 01:00:00
@@ -329,13 +329,13 @@ GO
 
 -- Zamanlamayı Job'a Bağla
 EXEC msdb.dbo.sp_attach_schedule 
-    @job_name = N'ReceiptOcrDb_DailyCleanup', 
+    @job_name = N'ReceiptOcrDb_New_DailyCleanup', 
     @schedule_name = N'Daily_01AM_Cleanup';
 GO
 
 -- İşi Hedef Sunucuya (Local) Ekle
 EXEC msdb.dbo.sp_add_jobserver 
-    @job_name = N'ReceiptOcrDb_DailyCleanup', 
+    @job_name = N'ReceiptOcrDb_New_DailyCleanup', 
     @server_name = N'(local)';
 GO
 
