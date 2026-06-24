@@ -37,8 +37,7 @@
     <table class="archive-table">
       <thead>
         <tr>
-          <th style="width: 5%;">ID</th>
-          <th style="width: 22%;">Mağaza Adı</th>
+          <th style="width: 27%;">Mağaza Adı</th>
           <th style="width: 12%;">VKN/TCKN</th>
           <th style="width: 10%;">Fiş Tarihi</th>
           <th style="width: 10%;">Fiş No</th>
@@ -50,7 +49,6 @@
       </thead>
       <tbody>
         <tr *ngFor="let receipt of filteredReceipts">
-          <td class="id-cell">#{{ receipt.id }}</td>
           <td class="merchant-cell">{{ receipt.merchantName }}</td>
           <td>{{ receipt.vknTckn || '-' }}</td>
           <td>{{ receipt.receiptDate }}</td>
