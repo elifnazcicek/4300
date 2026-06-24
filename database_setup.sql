@@ -54,6 +54,7 @@ BEGIN
         [Tarih]             DATE              NOT NULL,
         [FirmaAdi]          NVARCHAR(255)     NOT NULL,
         [FisNo]             NVARCHAR(50)      NULL,
+        [VknTckn]           NVARCHAR(50)      NULL,
         [KdvOrani]          INT               NOT NULL DEFAULT 20,
         [ToplamTutar]       DECIMAL(10,2)     NOT NULL,
         [KdvTutari]         DECIMAL(10,2)     NOT NULL DEFAULT 0.00,
