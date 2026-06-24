@@ -61,8 +61,6 @@ BEGIN
         [KaydedenKullanici] NVARCHAR(50)      NOT NULL,
         [CreatedDate]       DATETIME2(7)      NOT NULL DEFAULT GETDATE(),
         [ItemsJson]         NVARCHAR(MAX)     NULL,
-        [Category]          NVARCHAR(100)     NOT NULL DEFAULT 'Gıda',
-        [PaymentMethod]     NVARCHAR(50)      NOT NULL DEFAULT 'Nakit',
         [ImagePath]         NVARCHAR(500)     NULL,
         
         CONSTRAINT [PK_Expenses] PRIMARY KEY CLUSTERED ([Id] ASC)
