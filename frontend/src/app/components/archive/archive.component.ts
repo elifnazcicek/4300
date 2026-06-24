@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
@@ -18,7 +18,7 @@ export class ArchiveComponent implements OnInit {
   loading: boolean = false;
   errorMessage: string = '';
 
-  constructor(private apiService: ApiService, private router: Router) {}
+  constructor(private apiService: ApiService, private router: Router, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.fetchReceipts();
@@ -27,15 +27,19 @@ export class ArchiveComponent implements OnInit {
   fetchReceipts(): void {
     this.loading = true;
     this.errorMessage = '';
+    this.cdr.detectChanges();
+    
     this.apiService.getReceipts().subscribe({
       next: (data) => {
         this.receipts = data;
         this.filterReceipts();
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.errorMessage = 'Veriler yüklenirken hata oluştu: ' + err.message;
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

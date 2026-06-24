@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { ActivatedRoute } from '@angular/router';
 
 interface ReceiptItem {
   itemName: string;
@@ -48,11 +49,17 @@ export class DashboardComponent implements OnInit {
   searchQuery: string = '';
   loadingArchive: boolean = false;
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private cdr: ChangeDetectorRef, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
     this.clearForm();
     this.fetchReceiptsList();
+    this.route.queryParams.subscribe(params => {
+      const editId = params['edit'];
+      if (editId) {
+        this.loadReceiptForEdit(Number(editId));
+      }
+    });
   }
 
   // === LEFT PANEL METHODS ===
@@ -74,6 +81,7 @@ export class DashboardComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.previewUrl = e.target.result;
+        this.cdr.detectChanges();
       };
       reader.readAsDataURL(file);
 
@@ -102,10 +110,15 @@ export class DashboardComponent implements OnInit {
 
           this.showPreview = true;
           this.showStatus('OCR tamamlandı!', 'success');
-          setTimeout(() => this.clearStatus(), 2500);
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.clearStatus();
+            this.cdr.detectChanges();
+          }, 2500);
         },
         error: (err) => {
           this.showStatus('Görüntü okunamadı: ' + err.message, 'error');
+          this.cdr.detectChanges();
         }
       });
     }
@@ -195,6 +208,7 @@ export class DashboardComponent implements OnInit {
     };
 
     this.showStatus('Kaydediliyor...', 'info');
+    this.cdr.detectChanges();
 
     const req = this.receiptId 
       ? this.apiService.updateReceipt(this.receiptId, payload)
@@ -207,10 +221,12 @@ export class DashboardComponent implements OnInit {
 
         setTimeout(() => {
           this.clearForm();
+          this.cdr.detectChanges();
         }, 1200);
       },
       error: (err) => {
         this.showStatus('Kayıt başarısız oldu: ' + err.message, 'error');
+        this.cdr.detectChanges();
       }
     });
   }
@@ -227,15 +243,18 @@ export class DashboardComponent implements OnInit {
   // === ARCHIVE METHODS ===
   fetchReceiptsList(): void {
     this.loadingArchive = true;
+    this.cdr.detectChanges();
     const currentUsername = localStorage.getItem('username') || '';
     this.apiService.getReceipts(currentUsername).subscribe({
       next: (data) => {
         this.receiptsList = data;
         this.filterReceipts();
         this.loadingArchive = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.loadingArchive = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -255,6 +274,7 @@ export class DashboardComponent implements OnInit {
 
   loadReceiptForEdit(id: number): void {
     this.showStatus('Fatura bilgileri forma yükleniyor...', 'info');
+    this.cdr.detectChanges();
     this.apiService.getReceiptDetails(id).subscribe({
       next: (data) => {
         this.receiptId = data.id;
@@ -283,10 +303,15 @@ export class DashboardComponent implements OnInit {
         }
         
         this.showStatus('Fatura düzenleme moduna alındı.', 'success');
-        setTimeout(() => this.clearStatus(), 1500);
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.clearStatus();
+          this.cdr.detectChanges();
+        }, 1500);
       },
       error: (err) => {
         this.showStatus('Veri okuma hatası: ' + err.message, 'error');
+        this.cdr.detectChanges();
       }
     });
   }
