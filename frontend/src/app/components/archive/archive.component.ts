@@ -62,6 +62,20 @@ export class ArchiveComponent implements OnInit {
     this.router.navigate(['/dashboard'], { queryParams: { edit: id } });
   }
 
+  deleteReceipt(id: number): void {
+    if (confirm('Bu fiş/fatura kaydını tamamen silmek istediğinize emin misiniz?')) {
+      const username = localStorage.getItem('username') || 'default';
+      this.apiService.deleteReceipt(id, username).subscribe({
+        next: (res) => {
+          this.fetchReceipts();
+        },
+        error: (err) => {
+          alert('Silme hatası: ' + err.message);
+        }
+      });
+    }
+  }
+
   downloadExcel(): void {
     window.open('http://localhost:5000/api/receipts/export', '_blank');
   }

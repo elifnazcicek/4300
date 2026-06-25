@@ -57,7 +57,10 @@
           <td class="text-right total-cell">{{ receipt.totalAmount | number:'1.2-2' }} TL</td>
           <td class="date-cell">{{ receipt.createdAt }}</td>
           <td style="text-align: center;">
-            <button class="btn btn-accent btn-xs" (click)="editReceipt(receipt.id)">Düzenle</button>
+            <div style="display: flex; gap: 6px; justify-content: center;">
+              <button class="btn btn-accent btn-xs" (click)="editReceipt(receipt.id)">Düzenle</button>
+              <button class="btn btn-danger btn-xs" (click)="deleteReceipt(receipt.id)" title="Sil">❌</button>
+            </div>
           </td>
         </tr>
       </tbody>

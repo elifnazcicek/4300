@@ -264,6 +264,33 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  deleteReceipt(id: number, event: MouseEvent): void {
+    event.stopPropagation();
+    if (confirm('Bu fiş/fatura kaydını tamamen silmek istediğinize emin misiniz?')) {
+      const username = localStorage.getItem('username') || 'default';
+      this.showStatus('Kayıt siliniyor...', 'info');
+      this.cdr.detectChanges();
+      
+      this.apiService.deleteReceipt(id, username).subscribe({
+        next: (res) => {
+          this.showStatus('Kayıt başarıyla silindi!', 'success');
+          if (this.receiptId === id) {
+            this.clearForm();
+          }
+          this.fetchReceiptsList();
+          setTimeout(() => {
+            this.clearStatus();
+            this.cdr.detectChanges();
+          }, 2000);
+        },
+        error: (err) => {
+          this.showStatus('Silme hatası: ' + err.message, 'error');
+          this.cdr.detectChanges();
+        }
+      });
+    }
+  }
+
   showStatus(msg: string, type: 'success' | 'info' | 'error'): void {
     this.statusMessage = msg;
     this.statusType = type;
