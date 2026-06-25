@@ -22,7 +22,6 @@ interface ReceiptItem {
 export class DashboardComponent implements OnInit {
   // === TABS & PANELS STATE ===
   leftTab: 'camera' | 'upload' = 'camera';
-  rightTab: 'form' | 'archive' = 'form';
   showPreview: boolean = false;
 
   // === ZOOM STATE ===
@@ -84,7 +83,6 @@ export class DashboardComponent implements OnInit {
     const file = event.target.files[0];
     if (file) {
       this.selectedFile = file;
-      this.rightTab = 'form';
       
       const reader = new FileReader();
       reader.onload = (e: any) => {
@@ -177,7 +175,6 @@ export class DashboardComponent implements OnInit {
 
         setTimeout(() => {
           this.clearForm();
-          this.rightTab = 'archive';
           this.cdr.detectChanges();
         }, 1200);
       },
@@ -232,7 +229,6 @@ export class DashboardComponent implements OnInit {
   }
 
   loadReceiptForEdit(id: number): void {
-    this.rightTab = 'form';
     this.showStatus('Fatura bilgileri forma yükleniyor...', 'info');
     this.cdr.detectChanges();
     this.apiService.getReceiptDetails(id).subscribe({
@@ -276,11 +272,6 @@ export class DashboardComponent implements OnInit {
   clearStatus(): void {
     this.statusMessage = '';
     this.statusType = null;
-  }
-
-  setRightTab(tab: 'form' | 'archive'): void {
-    this.rightTab = tab;
-    this.cdr.detectChanges();
   }
 
   resetZoom(): void {
