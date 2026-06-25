@@ -23,6 +23,7 @@ export class DashboardComponent implements OnInit {
   // === TABS & PANELS STATE ===
   leftTab: 'camera' | 'upload' = 'camera';
   showPreview: boolean = false;
+  isDragActive: boolean = false;
 
   // === ZOOM STATE ===
   zoomScale: number = 1.0;
@@ -82,43 +83,148 @@ export class DashboardComponent implements OnInit {
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
-      this.selectedFile = file;
-      
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.previewUrl = e.target.result;
-        this.cdr.detectChanges();
-      };
-      reader.readAsDataURL(file);
-
-      this.showStatus('Dosya yükleniyor ve Gemini OCR tarafından çözümleniyor...', 'info');
-      
-      // BİZİM GERÇEK .NET ENDPOINT'İMİZİ ÇAĞIRIR (/api/receipt/scan)
-      this.apiService.scanReceipt(file).subscribe({
-        next: (res) => {
-          // Local backend response mapping
-          this.merchantName = res.merchant_name || res.merchantName || '';
-          this.vknTckn = res.vkn_tckn || res.vknTckn || '';
-          this.receiptDate = res.receipt_date || res.receiptDate || '';
-          this.receiptNo = res.receipt_no || res.receiptNo || '';
-          this.totalAmount = res.total_amount || res.totalAmount || 0;
-          this.taxAmount = res.tax_amount || res.taxAmount || 0;
-          this.imagePath = res.image_path || res.imagePath || null;
-
-          this.showPreview = true;
-          this.showStatus('OCR tamamlandı!', 'success');
-          this.cdr.detectChanges();
-          setTimeout(() => {
-            this.clearStatus();
-            this.cdr.detectChanges();
-          }, 2500);
-        },
-        error: (err) => {
-          this.showStatus('Görüntü okunamadı: ' + err.message, 'error');
-          this.cdr.detectChanges();
-        }
-      });
+      this.processImageFile(file);
     }
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragActive = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragActive = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragActive = false;
+
+    const dt = event.dataTransfer;
+    if (!dt) return;
+
+    // 1. Dosya sürüklenip bırakıldıysa (Local File Explorer)
+    if (dt.files && dt.files.length > 0) {
+      const file = dt.files[0];
+      if (file.type.startsWith('image/')) {
+        this.processImageFile(file);
+      } else {
+        this.showStatus('Lütfen sadece görsel dosyası yükleyin.', 'error');
+      }
+      return;
+    }
+
+    // 2. Başka bir sekmeden (örn: WhatsApp Web) görsel sürüklenip bırakıldıysa
+    const html = dt.getData('text/html');
+    const urlList = dt.getData('text/uri-list');
+    const plainText = dt.getData('text/plain');
+
+    let imageUrl = '';
+
+    if (html) {
+      const match = html.match(/<img[^>]+src="([^">]+)"/);
+      if (match && match[1]) {
+        imageUrl = match[1];
+      }
+    }
+
+    if (!imageUrl && urlList) {
+      imageUrl = urlList.split('\n')[0].trim();
+    }
+
+    if (!imageUrl && plainText && (plainText.startsWith('http') || plainText.startsWith('data:image/'))) {
+      imageUrl = plainText.trim();
+    }
+
+    if (imageUrl) {
+      this.processImageUrl(imageUrl);
+    } else {
+      this.showStatus('Sürüklenen veri görsel olarak çözümlenemedi.', 'error');
+    }
+  }
+
+  processImageFile(file: File): void {
+    this.selectedFile = file;
+    
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      this.previewUrl = e.target.result;
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+
+    this.showStatus('Dosya yükleniyor ve Gemini OCR tarafından çözümleniyor...', 'info');
+    this.cdr.detectChanges();
+
+    this.apiService.scanReceipt(file).subscribe({
+      next: (res) => {
+        this.merchantName = res.merchant_name || res.merchantName || '';
+        this.vknTckn = res.vkn_tckn || res.vknTckn || '';
+        this.receiptDate = res.receipt_date || res.receiptDate || '';
+        this.receiptNo = res.receipt_no || res.receiptNo || '';
+        this.totalAmount = res.total_amount || res.totalAmount || 0;
+        this.taxAmount = res.tax_amount || res.taxAmount || 0;
+        this.imagePath = res.image_path || res.imagePath || null;
+
+        this.showPreview = true;
+        this.showStatus('OCR tamamlandı!', 'success');
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.clearStatus();
+          this.cdr.detectChanges();
+        }, 2500);
+      },
+      error: (err) => {
+        this.showStatus('Görüntü okunamadı: ' + err.message, 'error');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  processImageUrl(url: string): void {
+    this.showStatus('Sürüklenen görsel işleniyor...', 'info');
+    this.cdr.detectChanges();
+
+    // Base64 veri URL'si ise
+    if (url.startsWith('data:image/')) {
+      try {
+        const blob = this.dataURLtoBlob(url);
+        const file = new File([blob], 'dragged_image.jpg', { type: blob.type });
+        this.processImageFile(file);
+      } catch (e) {
+        this.showStatus('Base64 görsel çözümlenirken hata oluştu.', 'error');
+      }
+      return;
+    }
+
+    // Blob URL'i veya HTTP URL'i ise fetch etmeyi dene
+    fetch(url)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], 'dragged_image.jpg', { type: blob.type || 'image/jpeg' });
+        this.processImageFile(file);
+      })
+      .catch(err => {
+        this.showStatus('Görsel doğrudan indirilemedi (CORS engeli). Lütfen resmi bilgisayarınıza kaydedip sürükleyin.', 'error');
+        this.cdr.detectChanges();
+      });
+  }
+
+  dataURLtoBlob(dataurl: string): Blob {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
   }
 
   resetInput(): void {
