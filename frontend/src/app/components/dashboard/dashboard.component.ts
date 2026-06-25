@@ -24,6 +24,15 @@ export class DashboardComponent implements OnInit {
   leftTab: 'camera' | 'upload' = 'camera';
   showPreview: boolean = false;
 
+  // === ZOOM STATE ===
+  isVerifyMode: boolean = false;
+  zoomScale: number = 1.0;
+  panX: number = 0;
+  panY: number = 0;
+  isDragging: boolean = false;
+  dragStartX: number = 0;
+  dragStartY: number = 0;
+
   // === LEFT PANEL ===
   previewUrl: string | null = null;
   selectedFile: File | null = null;
@@ -264,5 +273,61 @@ export class DashboardComponent implements OnInit {
   clearStatus(): void {
     this.statusMessage = '';
     this.statusType = null;
+  }
+
+  // === ZOOM METHODS ===
+  openZoom(): void {
+    if (this.previewUrl) {
+      this.isVerifyMode = true;
+      this.resetZoom();
+      this.cdr.detectChanges();
+    }
+  }
+
+  closeZoom(): void {
+    this.isVerifyMode = false;
+    this.cdr.detectChanges();
+  }
+
+  saveReceiptFromModal(): void {
+    this.saveReceipt();
+    this.closeZoom();
+  }
+
+  resetZoom(): void {
+    this.zoomScale = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+  }
+
+  zoomIn(): void {
+    this.zoomScale = Math.min(this.zoomScale + 0.25, 4.0);
+  }
+
+  zoomOut(): void {
+    this.zoomScale = Math.max(this.zoomScale - 0.25, 0.5);
+  }
+
+  onImageWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const delta = event.deltaY < 0 ? 0.15 : -0.15;
+    this.zoomScale = Math.max(0.5, Math.min(this.zoomScale + delta, 4.0));
+  }
+
+  onImageDragStart(event: MouseEvent): void {
+    event.preventDefault();
+    this.isDragging = true;
+    this.dragStartX = event.clientX - this.panX;
+    this.dragStartY = event.clientY - this.panY;
+  }
+
+  onImageDrag(event: MouseEvent): void {
+    if (!this.isDragging) return;
+    this.panX = event.clientX - this.dragStartX;
+    this.panY = event.clientY - this.dragStartY;
+  }
+
+  onImageDragEnd(event: MouseEvent): void {
+    this.isDragging = false;
   }
 }

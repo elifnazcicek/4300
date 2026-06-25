@@ -202,8 +202,13 @@ BEGIN
         SET @ActualBackupFolder = 'C:\Backup';
     
     BEGIN TRY
-        -- Klasör yoksa oluştur (Gerekli yetkiler olmalıdır)
-        EXEC master.dbo.xp_create_subdir @ActualBackupFolder;
+        -- Klasör yoksa oluştur (Yetki hatası alınırsa yoksay ve yedeklemeyi dene)
+        BEGIN TRY
+            EXEC master.dbo.xp_create_subdir @ActualBackupFolder;
+        END TRY
+        BEGIN CATCH
+            PRINT 'Uyarı: xp_create_subdir çalıştırma yetkisi yok. Yedekleme klasörünün mevcut olduğu varsayılarak devam ediliyor...';
+        END CATCH
         
         -- Tarih formatı: YYYY_MM_DD
         SET @DateStr = REPLACE(CONVERT(NVARCHAR(10), GETDATE(), 111), '/', '_');

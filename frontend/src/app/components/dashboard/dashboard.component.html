@@ -39,11 +39,10 @@
       </div>
 
       <div class="view-container" *ngIf="showPreview">
-        <div class="preview-wrapper">
+        <div class="preview-wrapper" (click)="openZoom()" style="cursor: zoom-in;" title="Görseli tekerlek ve pan ile doğrulamak için tıklayın">
           <img *ngIf="previewUrl" [src]="previewUrl" alt="Okunan Fiş Görseli" class="captured-image">
         </div>
         
-
 
         <button class="btn btn-secondary btn-block" (click)="resetInput()" style="margin-top: 15px;">
           🔄 Yeni Görsel Aktar
@@ -89,6 +88,12 @@
               <span class="field-icon">🆔</span>
               <input type="text" id="vkn_tckn" [(ngModel)]="vknTckn" name="vknTckn" placeholder="Vergi No / TC Kimlik No">
             </div>
+            <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length !== 10 && vknTckn.length !== 11 && vknTckn.length <= 11">
+              ⚠️ VKN eksik olabilir (10 veya 11 hane olmalı)
+            </span>
+            <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length > 11">
+              ⚠️ VKN hatalı (en fazla 11 hane olmalı)
+            </span>
           </div>
         </div>
 
@@ -175,3 +180,79 @@
   </section>
 
 </div>
+
+<!-- ================= BASİT FİŞ DOĞRULAMA MODALI ================= -->
+<div class="image-modal-overlay" *ngIf="isVerifyMode" (click)="closeZoom()">
+  <div class="image-modal-content" (click)="$event.stopPropagation()">
+    
+    <!-- Sol Taraf: İnteraktif Görsel -->
+    <div class="zoom-image-container" 
+         (click)="$event.stopPropagation()"
+         (wheel)="onImageWheel($event)" 
+         (mousedown)="onImageDragStart($event)" 
+         (mousemove)="onImageDrag($event)" 
+         (mouseup)="onImageDragEnd($event)" 
+         (mouseleave)="onImageDragEnd($event)">
+      <img *ngIf="previewUrl" [src]="previewUrl" alt="Zoomed Receipt" class="zoomed-image" 
+           [style.transform]="'scale(' + zoomScale + ') translate(' + panX + 'px, ' + panY + 'px)'" 
+           [style.cursor]="isDragging ? 'grabbing' : 'grab'">
+    </div>
+
+    <!-- Sağ Taraf: Sistem Tarafından Okunan Bilgiler (Düzenlenebilir) -->
+    <div class="modal-info-panel" (click)="$event.stopPropagation()">
+      <h3>📋 Fiş Verilerini Düzenle</h3>
+      <div class="info-list-vertical">
+        <div class="info-item-vertical">
+          <label class="info-label" for="modal_merchant_name">🏢 Mağaza Adı</label>
+          <input type="text" id="modal_merchant_name" [(ngModel)]="merchantName" class="modal-input" placeholder="Mağaza veya satıcı bilgisi">
+        </div>
+        <div class="info-item-vertical">
+          <label class="info-label" for="modal_vkn_tckn">🆔 VKN / TCKN</label>
+          <input type="text" id="modal_vkn_tckn" [(ngModel)]="vknTckn" class="modal-input" placeholder="Vergi No / TC Kimlik No">
+          <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length !== 10 && vknTckn.length !== 11 && vknTckn.length <= 11">
+            ⚠️ VKN eksik olabilir (10 veya 11 hane olmalı)
+          </span>
+          <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length > 11">
+            ⚠️ VKN hatalı (en fazla 11 hane olmalı)
+          </span>
+        </div>
+        <div class="info-item-vertical">
+          <label class="info-label" for="modal_receipt_date">📅 Fiş Tarihi</label>
+          <input type="date" id="modal_receipt_date" [(ngModel)]="receiptDate" class="modal-input">
+        </div>
+        <div class="info-item-vertical">
+          <label class="info-label" for="modal_receipt_no">🎫 Fiş No</label>
+          <input type="text" id="modal_receipt_no" [(ngModel)]="receiptNo" class="modal-input" placeholder="Fiş / Fatura Numarası">
+        </div>
+        <div class="info-item-vertical">
+          <label class="info-label" for="modal_tax_amount">₺ KDV Tutarı (TL)</label>
+          <input type="number" id="modal_tax_amount" [(ngModel)]="taxAmount" class="modal-input" step="0.01" placeholder="0.00">
+        </div>
+        <div class="info-item-vertical">
+          <label class="info-label" for="modal_total_amount">₺ Toplam Tutar (TL)</label>
+          <input type="number" id="modal_total_amount" [(ngModel)]="totalAmount" class="modal-input font-highlight" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      
+      <div class="modal-zoom-controls">
+        <button type="button" class="btn btn-secondary btn-xs" (click)="zoomIn()">➕ Yaklaştır</button>
+        <button type="button" class="btn btn-secondary btn-xs" (click)="zoomOut()">➖ Uzaklaştır</button>
+        <button type="button" class="btn btn-secondary btn-xs" (click)="resetZoom()">🔄 Sıfırla</button>
+      </div>
+
+      <button type="button" class="btn btn-accent btn-block" (click)="saveReceiptFromModal()" [disabled]="!merchantName || !totalAmount" style="margin-top: 10px;">
+        💾 Veritabanına Kalıcı Kaydet
+      </button>
+      <button type="button" class="btn btn-secondary btn-block btn-sm" (click)="closeZoom()" style="margin-top: 5px;">
+        İptal Et ve Kapat
+      </button>
+      
+      <p class="click-outside-info" style="text-align: center; font-size: 0.7rem; color: var(--text-light); margin-top: 8px; margin-bottom: 0;">
+        💡 Kapatmak için fotoğraf veya panel harici boş bir alana tıklayabilirsiniz.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+

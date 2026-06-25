@@ -29,4 +29,8 @@ export class App {
     // Arkadaşın backend'inde henüz excel export olmadığı için geçici olarak yerel backend portuna yönlendiriyoruz
     window.open(`http://localhost:5000/api/receipts/export?username=${encodeURIComponent(username)}`, '_blank');
   }
+
+  getUsername(): string {
+    return localStorage.getItem('username') || '';
+  }
 }
