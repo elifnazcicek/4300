@@ -64,3 +64,45 @@
         gap: 6px;
     }
 }
+
+/* Header actions alignment and user badge bubble */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* uniform gap between items */
+}
+
+.active-user-badge {
+    background: #eff6ff; /* soft blue bubble */
+    border: 1px solid #dbeafe;
+    color: var(--color-primary);
+    padding: 0 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+    height: 38px; /* matching button heights */
+    box-sizing: border-box;
+}
+
+.header-actions .btn {
+    height: 38px; /* force equal height for all buttons in header */
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    margin: 0 !important; /* clear any manual inline margins */
+}
+
+.excel-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+}

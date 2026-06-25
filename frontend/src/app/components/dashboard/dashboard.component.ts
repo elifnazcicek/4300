@@ -22,10 +22,10 @@ interface ReceiptItem {
 export class DashboardComponent implements OnInit {
   // === TABS & PANELS STATE ===
   leftTab: 'camera' | 'upload' = 'camera';
+  rightTab: 'form' | 'archive' = 'form';
   showPreview: boolean = false;
 
   // === ZOOM STATE ===
-  isVerifyMode: boolean = false;
   zoomScale: number = 1.0;
   panX: number = 0;
   panY: number = 0;
@@ -84,6 +84,7 @@ export class DashboardComponent implements OnInit {
     const file = event.target.files[0];
     if (file) {
       this.selectedFile = file;
+      this.rightTab = 'form';
       
       const reader = new FileReader();
       reader.onload = (e: any) => {
@@ -176,6 +177,7 @@ export class DashboardComponent implements OnInit {
 
         setTimeout(() => {
           this.clearForm();
+          this.rightTab = 'archive';
           this.cdr.detectChanges();
         }, 1200);
       },
@@ -230,6 +232,7 @@ export class DashboardComponent implements OnInit {
   }
 
   loadReceiptForEdit(id: number): void {
+    this.rightTab = 'form';
     this.showStatus('Fatura bilgileri forma yükleniyor...', 'info');
     this.cdr.detectChanges();
     this.apiService.getReceiptDetails(id).subscribe({
@@ -275,23 +278,9 @@ export class DashboardComponent implements OnInit {
     this.statusType = null;
   }
 
-  // === ZOOM METHODS ===
-  openZoom(): void {
-    if (this.previewUrl) {
-      this.isVerifyMode = true;
-      this.resetZoom();
-      this.cdr.detectChanges();
-    }
-  }
-
-  closeZoom(): void {
-    this.isVerifyMode = false;
+  setRightTab(tab: 'form' | 'archive'): void {
+    this.rightTab = tab;
     this.cdr.detectChanges();
-  }
-
-  saveReceiptFromModal(): void {
-    this.saveReceipt();
-    this.closeZoom();
   }
 
   resetZoom(): void {

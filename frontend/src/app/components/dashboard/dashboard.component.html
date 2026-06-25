@@ -1,21 +1,22 @@
 <div class="workspace-main-grid">
 
-  <!-- ================= SOL KOLON: GÖRÜNTÜ ALMA / KAMERA / DOSYA ================= -->
+  <!-- ================= SOL KOLON: GÖRÜNTÜ ALMA / KAMERA / DOSYA & ZOOMABLE ÖNİZLEME ================= -->
   <section class="panel-section camera-section">
     <div class="panel-header-tabs" *ngIf="!showPreview">
-      <button class="tab-btn" [class.active]="leftTab === 'camera'" (click)="setLeftTab('camera')">
+      <button type="button" class="tab-btn" [class.active]="leftTab === 'camera'" (click)="setLeftTab('camera')">
         📷 Kamera
       </button>
-      <button class="tab-btn" [class.active]="leftTab === 'upload'" (click)="setLeftTab('upload')">
+      <button type="button" class="tab-btn" [class.active]="leftTab === 'upload'" (click)="setLeftTab('upload')">
         📁 Dosyadan Yükle
       </button>
     </div>
     
     <div class="panel-header" *ngIf="showPreview">
-      <h2>🧾 Taranan Fiş Görseli</h2>
+      <h2>🧾 Taranan Fiş Görseli (Yakınlaştırılabilir)</h2>
     </div>
 
     <div class="panel-content">
+      <!-- Fiş yüklenmemişken gösterilecek alanlar -->
       <div class="view-container" *ngIf="!showPreview">
         
         <div class="camera-wrapper" *ngIf="leftTab === 'camera'">
@@ -24,7 +25,7 @@
             <div class="aim-guide"></div>
             <img src="https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&auto=format&fit=crop" alt="Live stream" class="live-stream-img" />
           </div>
-          <button class="btn btn-primary btn-block" (click)="captureImage()" style="margin-top: 15px;">
+          <button type="button" class="btn btn-primary btn-block" (click)="captureImage()" style="margin-top: 15px;">
             📸 Fişi Yakala ve Tara
           </button>
         </div>
@@ -38,123 +39,117 @@
         </div>
       </div>
 
+      <!-- Fiş çözümlenince gösterilecek zoomable önizleme -->
       <div class="view-container" *ngIf="showPreview">
-        <div class="preview-wrapper" (click)="openZoom()" style="cursor: zoom-in;" title="Görseli tekerlek ve pan ile doğrulamak için tıklayın">
-          <img *ngIf="previewUrl" [src]="previewUrl" alt="Okunan Fiş Görseli" class="captured-image">
+        <div class="preview-wrapper" 
+             (wheel)="onImageWheel($event)" 
+             (mousedown)="onImageDragStart($event)" 
+             (mousemove)="onImageDrag($event)" 
+             (mouseup)="onImageDragEnd($event)" 
+             (mouseleave)="onImageDragEnd($event)"
+             [style.cursor]="isDragging ? 'grabbing' : 'grab'"
+             title="Görseli fare tekerleği ile yakınlaştırabilir veya sürükleyerek kaydırabilirsiniz">
+          <img *ngIf="previewUrl" [src]="previewUrl" alt="Okunan Fiş Görseli" 
+               class="captured-image" 
+               [style.transform]="'scale(' + zoomScale + ') translate(' + panX + 'px, ' + panY + 'px)'"
+               [style.transition]="isDragging ? 'none' : 'transform 0.1s ease-out'">
         </div>
         
+        <div class="zoom-in-place-controls">
+          <button type="button" class="btn btn-secondary btn-xs" (click)="zoomIn()">➕ Yaklaştır</button>
+          <button type="button" class="btn btn-secondary btn-xs" (click)="zoomOut()">➖ Uzaklaştır</button>
+          <button type="button" class="btn btn-secondary btn-xs" (click)="resetZoom()">🔄 Sıfırla</button>
+        </div>
 
-        <button class="btn btn-secondary btn-block" (click)="resetInput()" style="margin-top: 15px;">
+        <button type="button" class="btn btn-secondary btn-block" (click)="resetInput()" style="margin-top: 15px;">
           🔄 Yeni Görsel Aktar
         </button>
       </div>
     </div>
   </section>
 
-  <!-- ================= ORTA KOLON: DÜZENLENEBİLİR EXCEL FORM ================= -->
+  <!-- ================= SAĞ KOLON: İŞLEM PANELİ (FORM VEYA ARŞİV SEKMELERİ) ================= -->
   <section class="panel-section form-section">
-    <div class="panel-header">
-      <h2>📝 Elde Edilen Çıktılar</h2>
-      <span class="status-badge" [class.active]="!!merchantName">
-        {{ merchantName ? 'OCR Çözümlendi' : 'Girdi Bekleniyor' }}
-      </span>
+    <div class="panel-header-tabs">
+      <button type="button" class="tab-btn" [class.active]="rightTab === 'form'" (click)="setRightTab('form')">
+        📝 Fiş Verileri
+      </button>
+      <button type="button" class="tab-btn" [class.active]="rightTab === 'archive'" (click)="setRightTab('archive')">
+        📁 Veri Arşivi
+      </button>
     </div>
     
     <div class="panel-content">
-      <div *ngIf="statusMessage" class="process-alert" [ngClass]="statusType">
-        <div class="spinner spinner-sm" *ngIf="statusType === 'info'"></div>
-        <span>{{ statusMessage }}</span>
-      </div>
-
-      <div class="edit-mode-indicator" *ngIf="receiptId !== null">
-        <div class="edit-info">
-          <span>✏️ Kayıt Güncelleniyor (ID: <strong>#{{ receiptId }}</strong>)</span>
+      
+      <!-- SEKME 1: DÜZENLEME FORMU -->
+      <div class="tab-view-container" *ngIf="rightTab === 'form'">
+        <div *ngIf="statusMessage" class="process-alert" [ngClass]="statusType">
+          <div class="spinner spinner-sm" *ngIf="statusType === 'info'"></div>
+          <span>{{ statusMessage }}</span>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" (click)="cancelEdit()">İptal</button>
-      </div>
 
-      <form (submit)="saveReceipt(); $event.preventDefault();" id="receipt-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="merchant_name">Açıklama (Mağaza Adı)</label>
-            <div class="input-with-icon">
-              <span class="field-icon">🏢</span>
+        <div class="edit-mode-indicator" *ngIf="receiptId !== null">
+          <div class="edit-info">
+            <span>✏️ Kayıt Güncelleniyor (ID: <strong>#{{ receiptId }}</strong>)</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="cancelEdit()">İptal</button>
+        </div>
+
+        <form (submit)="saveReceipt(); $event.preventDefault();" id="receipt-form">
+          <div class="info-list-vertical">
+            <div class="form-group">
+              <label for="merchant_name">🏢 Mağaza Adı</label>
               <input type="text" id="merchant_name" [(ngModel)]="merchantName" name="merchantName" required placeholder="Mağaza veya satıcı bilgisi">
             </div>
-          </div>
-          <div class="form-group">
-            <label for="vkn_tckn">VKN / TCKN</label>
-            <div class="input-with-icon">
-              <span class="field-icon">🆔</span>
+            
+            <div class="form-group">
+              <label for="vkn_tckn">🆔 VKN / TCKN</label>
               <input type="text" id="vkn_tckn" [(ngModel)]="vknTckn" name="vknTckn" placeholder="Vergi No / TC Kimlik No">
+              <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length !== 10 && vknTckn.length !== 11 && vknTckn.length <= 11">
+                ⚠️ VKN eksik olabilir (10 veya 11 hane olmalı)
+              </span>
+              <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length > 11">
+                ⚠️ VKN hatalı (en fazla 11 hane olmalı)
+              </span>
             </div>
-            <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length !== 10 && vknTckn.length !== 11 && vknTckn.length <= 11">
-              ⚠️ VKN eksik olabilir (10 veya 11 hane olmalı)
-            </span>
-            <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length > 11">
-              ⚠️ VKN hatalı (en fazla 11 hane olmalı)
-            </span>
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="receipt_date">Fiş Tarihi</label>
-            <div class="input-with-icon">
-              <span class="field-icon">📅</span>
+            <div class="form-group">
+              <label for="receipt_date">📅 Fiş Tarihi</label>
               <input type="date" id="receipt_date" [(ngModel)]="receiptDate" name="receiptDate" required>
             </div>
-          </div>
-          <div class="form-group">
-            <label for="receipt_no">Fiş No</label>
-            <div class="input-with-icon">
-              <span class="field-icon">🎫</span>
+
+            <div class="form-group">
+              <label for="receipt_no">🎫 Fiş No</label>
               <input type="text" id="receipt_no" [(ngModel)]="receiptNo" name="receiptNo" placeholder="Fiş / Fatura Numarası">
             </div>
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="tax_amount">Toplam KDV (TL)</label>
-            <div class="input-with-icon">
-              <span class="field-icon">₺</span>
+            <div class="form-group">
+              <label for="tax_amount">₺ KDV Tutarı (TL)</label>
               <input type="number" id="tax_amount" [(ngModel)]="taxAmount" name="taxAmount" step="0.01" required placeholder="0.00">
             </div>
-          </div>
-          <div class="form-group">
-            <label for="total_amount">Toplam Tutar (KDV Dahil)</label>
-            <div class="input-with-icon">
-              <span class="field-icon">₺</span>
-              <input type="number" id="total_amount" [(ngModel)]="totalAmount" name="totalAmount" step="0.01" required placeholder="0.00">
+
+            <div class="form-group">
+              <label for="total_amount">₺ Toplam Tutar (TL)</label>
+              <input type="number" id="total_amount" [(ngModel)]="totalAmount" name="totalAmount" class="font-highlight" step="0.01" required placeholder="0.00">
             </div>
           </div>
+
+          <button type="submit" class="btn btn-accent btn-block" [disabled]="!merchantName || !totalAmount" style="margin-top: 20px;">
+            💾 {{ receiptId ? 'Veritabanındaki Kaydı Güncelle' : 'Veritabanına Kalıcı Kaydet' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- SEKME 2: VERİ ARŞİVİ -->
+      <div class="tab-view-container" *ngIf="rightTab === 'archive'">
+        <div class="archive-search" style="display: flex; gap: 8px;">
+          <input type="text" [(ngModel)]="searchQuery" (input)="filterReceipts()" placeholder="Ara (Mağaza veya Tarih)..." class="search-input" style="flex: 1;" />
+          <button type="button" class="btn btn-secondary btn-circle" (click)="fetchReceiptsList()" title="Yenile" style="width: 36px; height: 36px; padding: 0;">
+            🔄
+          </button>
         </div>
 
-        <button type="submit" class="btn btn-accent btn-block" [disabled]="!merchantName || !totalAmount" style="margin-top: 20px;">
-          💾 {{ receiptId ? 'Veritabanındaki Kaydı Güncelle' : 'Veritabanına Kalıcı Kaydet' }}
-        </button>
-      </form>
-    </div>
-  </section>
-
-  <!-- ================= SAĞ KOLON: VERİ ARŞİVİ ================= -->
-  <section class="panel-section list-section">
-    <div class="panel-header">
-      <h2>📁 Veri Arşivi</h2>
-      <button class="btn btn-circle" (click)="fetchReceiptsList()" title="Yenile" style="margin-left: auto;">
-        🔄
-      </button>
-    </div>
-
-    <div class="panel-content">
-      <div class="view-container">
-        <!-- Search bar -->
-        <div class="archive-search">
-          <input type="text" [(ngModel)]="searchQuery" (input)="filterReceipts()" placeholder="Ara (Mağaza veya Tarih)..." class="search-input" />
-        </div>
-
-        <div class="history-list">
+        <div class="history-list" style="margin-top: 10px;">
           <div *ngIf="loadingArchive" class="archive-loading">
             <div class="spinner spinner-sm"></div>
             <span>Arşiv yükleniyor...</span>
@@ -171,88 +166,13 @@
             <div class="card-merchant">{{ r.merchantName }}</div>
             <div class="card-bottom">
               <div class="card-total">₺{{ r.totalAmount | number:'1.2-2' }}</div>
-              <button class="btn btn-primary btn-xs" (click)="loadReceiptForEdit(r.id)">Düzenle</button>
+              <button type="button" class="btn btn-primary btn-xs" (click)="loadReceiptForEdit(r.id)">Düzenle</button>
             </div>
           </div>
         </div>
       </div>
+
     </div>
   </section>
 
 </div>
-
-<!-- ================= BASİT FİŞ DOĞRULAMA MODALI ================= -->
-<div class="image-modal-overlay" *ngIf="isVerifyMode" (click)="closeZoom()">
-  <div class="image-modal-content" (click)="$event.stopPropagation()">
-    
-    <!-- Sol Taraf: İnteraktif Görsel -->
-    <div class="zoom-image-container" 
-         (click)="$event.stopPropagation()"
-         (wheel)="onImageWheel($event)" 
-         (mousedown)="onImageDragStart($event)" 
-         (mousemove)="onImageDrag($event)" 
-         (mouseup)="onImageDragEnd($event)" 
-         (mouseleave)="onImageDragEnd($event)">
-      <img *ngIf="previewUrl" [src]="previewUrl" alt="Zoomed Receipt" class="zoomed-image" 
-           [style.transform]="'scale(' + zoomScale + ') translate(' + panX + 'px, ' + panY + 'px)'" 
-           [style.cursor]="isDragging ? 'grabbing' : 'grab'">
-    </div>
-
-    <!-- Sağ Taraf: Sistem Tarafından Okunan Bilgiler (Düzenlenebilir) -->
-    <div class="modal-info-panel" (click)="$event.stopPropagation()">
-      <h3>📋 Fiş Verilerini Düzenle</h3>
-      <div class="info-list-vertical">
-        <div class="info-item-vertical">
-          <label class="info-label" for="modal_merchant_name">🏢 Mağaza Adı</label>
-          <input type="text" id="modal_merchant_name" [(ngModel)]="merchantName" class="modal-input" placeholder="Mağaza veya satıcı bilgisi">
-        </div>
-        <div class="info-item-vertical">
-          <label class="info-label" for="modal_vkn_tckn">🆔 VKN / TCKN</label>
-          <input type="text" id="modal_vkn_tckn" [(ngModel)]="vknTckn" class="modal-input" placeholder="Vergi No / TC Kimlik No">
-          <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length !== 10 && vknTckn.length !== 11 && vknTckn.length <= 11">
-            ⚠️ VKN eksik olabilir (10 veya 11 hane olmalı)
-          </span>
-          <span class="vkn-warning" *ngIf="vknTckn && vknTckn.length > 11">
-            ⚠️ VKN hatalı (en fazla 11 hane olmalı)
-          </span>
-        </div>
-        <div class="info-item-vertical">
-          <label class="info-label" for="modal_receipt_date">📅 Fiş Tarihi</label>
-          <input type="date" id="modal_receipt_date" [(ngModel)]="receiptDate" class="modal-input">
-        </div>
-        <div class="info-item-vertical">
-          <label class="info-label" for="modal_receipt_no">🎫 Fiş No</label>
-          <input type="text" id="modal_receipt_no" [(ngModel)]="receiptNo" class="modal-input" placeholder="Fiş / Fatura Numarası">
-        </div>
-        <div class="info-item-vertical">
-          <label class="info-label" for="modal_tax_amount">₺ KDV Tutarı (TL)</label>
-          <input type="number" id="modal_tax_amount" [(ngModel)]="taxAmount" class="modal-input" step="0.01" placeholder="0.00">
-        </div>
-        <div class="info-item-vertical">
-          <label class="info-label" for="modal_total_amount">₺ Toplam Tutar (TL)</label>
-          <input type="number" id="modal_total_amount" [(ngModel)]="totalAmount" class="modal-input font-highlight" step="0.01" placeholder="0.00">
-        </div>
-      </div>
-      
-      <div class="modal-zoom-controls">
-        <button type="button" class="btn btn-secondary btn-xs" (click)="zoomIn()">➕ Yaklaştır</button>
-        <button type="button" class="btn btn-secondary btn-xs" (click)="zoomOut()">➖ Uzaklaştır</button>
-        <button type="button" class="btn btn-secondary btn-xs" (click)="resetZoom()">🔄 Sıfırla</button>
-      </div>
-
-      <button type="button" class="btn btn-accent btn-block" (click)="saveReceiptFromModal()" [disabled]="!merchantName || !totalAmount" style="margin-top: 10px;">
-        💾 Veritabanına Kalıcı Kaydet
-      </button>
-      <button type="button" class="btn btn-secondary btn-block btn-sm" (click)="closeZoom()" style="margin-top: 5px;">
-        İptal Et ve Kapat
-      </button>
-      
-      <p class="click-outside-info" style="text-align: center; font-size: 0.7rem; color: var(--text-light); margin-top: 8px; margin-bottom: 0;">
-        💡 Kapatmak için fotoğraf veya panel harici boş bir alana tıklayabilirsiniz.
-      </p>
-    </div>
-
-  </div>
-</div>
-
-
