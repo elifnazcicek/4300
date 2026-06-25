@@ -489,9 +489,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-height: 480px;
     overflow-y: auto;
-    flex: 1;
-    min-height: 0;
+    padding-right: 6px;
 }
 
 .archive-card {

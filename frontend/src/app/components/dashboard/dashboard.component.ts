@@ -215,17 +215,19 @@ export class DashboardComponent implements OnInit {
 
   filterReceipts(): void {
     if (!this.searchQuery.trim()) {
-      this.filteredReceipts = this.receiptsList;
+      this.filteredReceipts = this.receiptsList.slice(0, 10);
       return;
     }
     const q = this.searchQuery.toLowerCase();
-    this.filteredReceipts = this.receiptsList.filter(r => 
-      r.merchantName.toLowerCase().includes(q) ||
-      r.receiptDate.toLowerCase().includes(q) ||
-      (r.receiptNo && r.receiptNo.toLowerCase().includes(q)) ||
-      (r.vknTckn && r.vknTckn.toLowerCase().includes(q)) ||
-      r.id.toString().includes(q)
-    );
+    this.filteredReceipts = this.receiptsList
+      .filter(r => 
+        r.merchantName.toLowerCase().includes(q) ||
+        r.receiptDate.toLowerCase().includes(q) ||
+        (r.receiptNo && r.receiptNo.toLowerCase().includes(q)) ||
+        (r.vknTckn && r.vknTckn.toLowerCase().includes(q)) ||
+        r.id.toString().includes(q)
+      )
+      .slice(0, 10);
   }
 
   loadReceiptForEdit(id: number): void {
