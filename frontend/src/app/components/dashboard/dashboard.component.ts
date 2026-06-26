@@ -43,6 +43,20 @@ export class DashboardComponent implements OnInit {
   vknTckn: string = '';
   receiptDate: string = '';
   receiptNo: string = '';
+  
+  // Breakdown properties
+  matrah1: number = 0;
+  kdv1: number = 0;
+  total1: number = 0;
+  
+  matrah10: number = 0;
+  kdv10: number = 0;
+  total10: number = 0;
+  
+  matrah20: number = 0;
+  kdv20: number = 0;
+  total20: number = 0;
+
   totalAmount: number = 0;
   taxAmount: number = 0;
   imagePath: string | null = null;
@@ -166,8 +180,33 @@ export class DashboardComponent implements OnInit {
         this.vknTckn = res.vkn_tckn || res.vknTckn || '';
         this.receiptDate = res.receipt_date || res.receiptDate || '';
         this.receiptNo = res.receipt_no || res.receiptNo || '';
-        this.totalAmount = res.total_amount || res.totalAmount || 0;
-        this.taxAmount = res.tax_amount || res.taxAmount || 0;
+        
+        // Populate the KDV rates breakdown from the OCR response
+        const total = res.total_amount || res.totalAmount || 0;
+        const tax = res.tax_amount || res.taxAmount || 0;
+        
+        this.matrah1 = res.matrah1 !== undefined ? res.matrah1 : (res.matrah_1 || 0);
+        this.kdv1 = res.kdv1 !== undefined ? res.kdv1 : (res.kdv_1 || 0);
+        this.total1 = this.matrah1 + this.kdv1;
+        
+        this.matrah10 = res.matrah10 !== undefined ? res.matrah10 : (res.matrah_10 || 0);
+        this.kdv10 = res.kdv10 !== undefined ? res.kdv10 : (res.kdv_10 || 0);
+        this.total10 = this.matrah10 + this.kdv10;
+        
+        this.matrah20 = res.matrah20 !== undefined ? res.matrah20 : (res.matrah_20 || 0);
+        this.kdv20 = res.kdv20 !== undefined ? res.kdv20 : (res.kdv_20 || 0);
+        this.total20 = this.matrah20 + this.kdv20;
+        
+        this.totalAmount = total;
+        this.taxAmount = tax;
+        
+        // Fallback: if all breakdown rates are zero but total is non-zero, put it all under %20 rate row by default
+        if (this.totalAmount > 0 && this.total1 === 0 && this.total10 === 0 && this.total20 === 0) {
+          this.kdv20 = this.taxAmount;
+          this.matrah20 = this.totalAmount - this.taxAmount;
+          this.total20 = this.totalAmount;
+        }
+        
         this.imagePath = res.image_path || res.imagePath || null;
 
         this.showPreview = true;
@@ -240,10 +279,96 @@ export class DashboardComponent implements OnInit {
     this.vknTckn = '';
     this.receiptDate = new Date().toISOString().substring(0, 10);
     this.receiptNo = '';
+    
+    this.kdv1 = 0; this.matrah1 = 0; this.total1 = 0;
+    this.kdv10 = 0; this.matrah10 = 0; this.total10 = 0;
+    this.kdv20 = 0; this.matrah20 = 0; this.total20 = 0;
+    
     this.totalAmount = 0;
     this.taxAmount = 0;
+    
     this.imagePath = null;
     this.resetInput();
+  }
+
+  onKdvRowChange(rate: number): void {
+    if (rate === 1) {
+      this.total1 = (Number(this.matrah1) || 0) + (Number(this.kdv1) || 0);
+    } else if (rate === 10) {
+      this.total10 = (Number(this.matrah10) || 0) + (Number(this.kdv10) || 0);
+    } else if (rate === 20) {
+      this.total20 = (Number(this.matrah20) || 0) + (Number(this.kdv20) || 0);
+    }
+
+    this.taxAmount = (Number(this.kdv1) || 0) + (Number(this.kdv10) || 0) + (Number(this.kdv20) || 0);
+    this.totalAmount = this.total1 + this.total10 + this.total20;
+  }
+
+  onKdvTotalChange(rate: number): void {
+    if (rate === 1) {
+      this.matrah1 = (Number(this.total1) || 0) - (Number(this.kdv1) || 0);
+    } else if (rate === 10) {
+      this.matrah10 = (Number(this.total10) || 0) - (Number(this.kdv10) || 0);
+    } else if (rate === 20) {
+      this.matrah20 = (Number(this.total20) || 0) - (Number(this.kdv20) || 0);
+    }
+
+    this.taxAmount = (Number(this.kdv1) || 0) + (Number(this.kdv10) || 0) + (Number(this.kdv20) || 0);
+    this.totalAmount = (Number(this.total1) || 0) + (Number(this.total10) || 0) + (Number(this.total20) || 0);
+  }
+
+  onTotalAmountChange(): void {
+    const val = Number(this.totalAmount) || 0;
+    const activeRates: number[] = [];
+    if (this.total1 > 0) activeRates.push(1);
+    if (this.total10 > 0) activeRates.push(10);
+    if (this.total20 > 0) activeRates.push(20);
+
+    let targetRate = 20;
+    if (activeRates.length === 1) {
+      targetRate = activeRates[0];
+    } else if (activeRates.length > 1) {
+      targetRate = activeRates.includes(20) ? 20 : (activeRates.includes(10) ? 10 : 1);
+    }
+
+    if (targetRate === 1) {
+      this.total1 = val - (this.total10 + this.total20);
+      this.matrah1 = this.total1 - this.kdv1;
+    } else if (targetRate === 10) {
+      this.total10 = val - (this.total1 + this.total20);
+      this.matrah10 = this.total10 - this.kdv10;
+    } else {
+      this.total20 = val - (this.total1 + this.total10);
+      this.matrah20 = this.total20 - this.kdv20;
+    }
+  }
+
+  onTaxAmountChange(): void {
+    const val = Number(this.taxAmount) || 0;
+    const activeRates: number[] = [];
+    if (this.kdv1 > 0) activeRates.push(1);
+    if (this.kdv10 > 0) activeRates.push(10);
+    if (this.kdv20 > 0) activeRates.push(20);
+
+    let targetRate = 20;
+    if (activeRates.length === 1) {
+      targetRate = activeRates[0];
+    } else if (activeRates.length > 1) {
+      targetRate = activeRates.includes(20) ? 20 : (activeRates.includes(10) ? 10 : 1);
+    }
+
+    if (targetRate === 1) {
+      this.kdv1 = val - (this.kdv10 + this.kdv20);
+      this.total1 = this.matrah1 + this.kdv1;
+    } else if (targetRate === 10) {
+      this.kdv10 = val - (this.kdv1 + this.kdv20);
+      this.total10 = this.matrah10 + this.kdv10;
+    } else {
+      this.kdv20 = val - (this.kdv1 + this.kdv10);
+      this.total20 = this.matrah20 + this.kdv20;
+    }
+    
+    this.totalAmount = this.total1 + this.total10 + this.total20;
   }
 
   saveReceipt(): void {
@@ -260,6 +385,12 @@ export class DashboardComponent implements OnInit {
       fisNo: this.receiptNo,
       totalAmount: this.totalAmount,
       taxAmount: this.taxAmount,
+      matrah1: Number(this.matrah1) || 0,
+      kdv1: Number(this.kdv1) || 0,
+      matrah10: Number(this.matrah10) || 0,
+      kdv10: Number(this.kdv10) || 0,
+      matrah20: Number(this.matrah20) || 0,
+      kdv20: Number(this.kdv20) || 0,
       category: 'Diğer',
       paymentMethod: 'Nakit',
       imagePath: this.imagePath,
@@ -346,8 +477,32 @@ export class DashboardComponent implements OnInit {
         this.vknTckn = data.vknTckn || '';
         this.receiptDate = data.receiptDate;
         this.receiptNo = data.receiptNo || '';
-        this.totalAmount = data.totalAmount;
-        this.taxAmount = data.taxAmount;
+        
+        const total = data.totalAmount || 0;
+        const tax = data.taxAmount || 0;
+        const rate = data.kdvOrani || 20;
+
+        // Reset all rows
+        this.kdv1 = 0; this.matrah1 = 0; this.total1 = 0;
+        this.kdv10 = 0; this.matrah10 = 0; this.total10 = 0;
+        this.kdv20 = 0; this.matrah20 = 0; this.total20 = 0;
+
+        if (rate === 1) {
+          this.kdv1 = tax;
+          this.matrah1 = total - tax;
+          this.total1 = total;
+        } else if (rate === 10) {
+          this.kdv10 = tax;
+          this.matrah10 = total - tax;
+          this.total10 = total;
+        } else { // 20
+          this.kdv20 = tax;
+          this.matrah20 = total - tax;
+          this.total20 = total;
+        }
+
+        this.totalAmount = total;
+        this.taxAmount = tax;
         this.imagePath = data.imagePath;
 
         if (data.imagePath) {

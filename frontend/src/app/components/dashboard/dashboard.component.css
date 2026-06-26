@@ -304,6 +304,24 @@
     outline: none;
 }
 
+.input-with-icon select {
+    width: 100%;
+    padding: 9px 12px 9px 36px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-family: inherit;
+    transition: var(--transition);
+}
+
+.input-with-icon select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    outline: none;
+}
+
 .edit-mode-indicator {
     display: flex;
     justify-content: space-between;

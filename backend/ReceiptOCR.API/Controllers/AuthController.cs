@@ -65,10 +65,89 @@ namespace ReceiptOCR.API.Controllers
                 FullName = request.Username, // Varsayılan olarak username atanıyor
                 Role = "User",
                 IsActive = true,
-                CreatedDate = DateTime.UtcNow
+                CreatedDate = DateTime.UtcNow,
+                PhoneNumber = request.PhoneNumber
             };
 
             _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new AuthResponse
+            {
+                Success = true,
+                Username = user.Username,
+                Token = GenerateJwtToken(user)
+            });
+        }
+
+        [HttpPost("reset-password/request")]
+        public async Task<IActionResult> RequestPasswordReset([FromBody] ResetPasswordRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.PhoneNumber))
+                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı ve telefon numarası zorunludur." });
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == request.Username.ToLower());
+
+            if (user == null)
+            {
+                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya telefon numarası hatalı." });
+            }
+
+            // Normalise phone numbers
+            var dbPhone = new string(user.PhoneNumber?.Where(char.IsDigit).ToArray() ?? Array.Empty<char>());
+            var reqPhone = new string(request.PhoneNumber.Where(char.IsDigit).ToArray());
+
+            if (string.IsNullOrEmpty(dbPhone) || dbPhone != reqPhone)
+            {
+                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya telefon numarası hatalı." });
+            }
+
+            // Generate 6-digit random code
+            var random = new Random();
+            var otpCode = random.Next(100000, 999999).ToString();
+
+            // Set expiry (5 minutes)
+            user.SmsOtpCode = otpCode;
+            user.SmsOtpExpiry = DateTime.UtcNow.AddMinutes(5);
+
+            await _context.SaveChangesAsync();
+
+            // Simulating SMS gateway send
+            Console.WriteLine($"\n[SMS GATEWAY] OTP for user '{user.Username}' sent to '{user.PhoneNumber}': {otpCode}\n");
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Doğrulama kodu telefonunuza gönderildi.",
+                OtpCode = otpCode 
+            });
+        }
+
+        [HttpPost("reset-password/verify")]
+        public async Task<IActionResult> VerifyPasswordReset([FromBody] ResetPasswordVerifyDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.OtpCode) || string.IsNullOrWhiteSpace(request.NewPassword))
+                return BadRequest(new AuthResponse { Success = false, Error = "Tüm alanlar zorunludur." });
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == request.Username.ToLower());
+
+            if (user == null || user.SmsOtpCode != request.OtpCode)
+            {
+                return BadRequest(new AuthResponse { Success = false, Error = "Doğrulama kodu hatalı." });
+            }
+
+            if (user.SmsOtpExpiry == null || user.SmsOtpExpiry < DateTime.UtcNow)
+            {
+                return BadRequest(new AuthResponse { Success = false, Error = "Doğrulama kodunun süresi dolmuş." });
+            }
+
+            // Reset password
+            user.PasswordHash = HashPassword(request.NewPassword);
+            user.SmsOtpCode = null;
+            user.SmsOtpExpiry = null;
+
             await _context.SaveChangesAsync();
 
             return Ok(new AuthResponse
@@ -119,5 +198,19 @@ namespace ReceiptOCR.API.Controllers
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
+    }
+
+    public class ResetPasswordRequestDto
+    {
+        public string Username { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordVerifyDto
+    {
+        public string Username { get; set; } = string.Empty;
+        public string OtpCode { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

@@ -134,19 +134,93 @@
           </div>
         </div>
 
-        <div class="form-row">
+        <!-- KDV Oranları Onay Tablosu -->
+        <div class="kdv-breakdown-container" style="margin-top: 15px; margin-bottom: 15px;">
+          <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block;">
+            📊 KDV Oranları Dağılımı (Onay Ekranı)
+          </label>
+          <div class="kdv-table-wrapper" style="border: 1px solid var(--panel-border, #e2e8f0); border-radius: 8px; overflow: hidden; background: white;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+              <thead>
+                <tr style="background: #f8fafc; border-bottom: 1px solid var(--panel-border, #e2e8f0);">
+                  <th style="padding: 8px 12px; font-weight: 600; color: var(--text-muted);">KDV Oranı</th>
+                  <th style="padding: 8px 12px; font-weight: 600; color: var(--text-muted);">KDV Matrahı (₺)</th>
+                  <th style="padding: 8px 12px; font-weight: 600; color: var(--text-muted);">KDV Tutarı (₺)</th>
+                  <th style="padding: 8px 12px; font-weight: 600; color: var(--text-muted);">Toplam (₺)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- %1 Row -->
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 8px 12px; font-weight: 600; color: var(--text-main);">%1</td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="matrah1" name="matrah1" (input)="onKdvRowChange(1)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" placeholder="0.00">
+                  </td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="kdv1" name="kdv1" (input)="onKdvRowChange(1)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" placeholder="0.00">
+                  </td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="total1" name="total1" (input)="onKdvTotalChange(1)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; font-weight: 700; color: var(--color-primary, #4f46e5);" placeholder="0.00">
+                  </td>
+                </tr>
+                <!-- %10 Row -->
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 8px 12px; font-weight: 600; color: var(--text-main);">%10</td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="matrah10" name="matrah10" (input)="onKdvRowChange(10)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" placeholder="0.00">
+                  </td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="kdv10" name="kdv10" (input)="onKdvRowChange(10)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" placeholder="0.00">
+                  </td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="total10" name="total10" (input)="onKdvTotalChange(10)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; font-weight: 700; color: var(--color-primary, #4f46e5);" placeholder="0.00">
+                  </td>
+                </tr>
+                <!-- %20 Row -->
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 8px 12px; font-weight: 600; color: var(--text-main);">%20</td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="matrah20" name="matrah20" (input)="onKdvRowChange(20)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" placeholder="0.00">
+                  </td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="kdv20" name="kdv20" (input)="onKdvRowChange(20)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;" placeholder="0.00">
+                  </td>
+                  <td style="padding: 4px 8px;">
+                    <input type="number" [(ngModel)]="total20" name="total20" (input)="onKdvTotalChange(20)" step="0.01" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; font-weight: 700; color: var(--color-primary, #4f46e5);" placeholder="0.00">
+                  </td>
+                </tr>
+                <!-- Genel Toplam Row -->
+                <tr style="background: #f8fafc; font-weight: 700;">
+                  <td style="padding: 10px 12px; color: var(--text-main);">Genel Toplam</td>
+                  <td style="padding: 10px 12px; color: var(--text-main);">
+                    {{ (matrah1 + matrah10 + matrah20) | number:'1.2-2' }}
+                  </td>
+                  <td style="padding: 10px 12px; color: var(--text-main);">
+                    {{ (kdv1 + kdv10 + kdv20) | number:'1.2-2' }}
+                  </td>
+                  <td style="padding: 10px 12px; color: var(--color-accent, #10b981); font-size: 0.95rem;">
+                    {{ (total1 + total10 + total20) | number:'1.2-2' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Toplam KDV ve Tutar (Manuel Değiştirilebilir) -->
+        <div class="form-row" style="margin-top: 15px;">
           <div class="form-group">
             <label for="tax_amount">Toplam KDV (TL)</label>
             <div class="input-with-icon">
               <span class="field-icon">₺</span>
-              <input type="number" id="tax_amount" [(ngModel)]="taxAmount" name="taxAmount" step="0.01" required placeholder="0.00">
+              <input type="number" id="tax_amount" [(ngModel)]="taxAmount" name="taxAmount" (input)="onTaxAmountChange()" step="0.01" required placeholder="0.00">
             </div>
           </div>
           <div class="form-group">
             <label for="total_amount">Toplam Tutar (KDV Dahil)</label>
             <div class="input-with-icon">
               <span class="field-icon">₺</span>
-              <input type="number" id="total_amount" [(ngModel)]="totalAmount" name="totalAmount" step="0.01" required placeholder="0.00">
+              <input type="number" id="total_amount" [(ngModel)]="totalAmount" name="totalAmount" (input)="onTotalAmountChange()" step="0.01" required placeholder="0.00">
             </div>
           </div>
         </div>

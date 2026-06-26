@@ -9,5 +9,8 @@ namespace ReceiptOCR.API.Models
         public string Role { get; set; } = "User";
         public bool IsActive { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+        public string? PhoneNumber { get; set; }
+        public string? SmsOtpCode { get; set; }
+        public DateTime? SmsOtpExpiry { get; set; }
     }
 }

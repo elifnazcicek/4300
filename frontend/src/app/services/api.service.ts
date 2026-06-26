@@ -49,6 +49,14 @@ export class ApiService {
     return this.http.post<any>(`${this.baseUrl}/auth/register`, credentials);
   }
 
+  requestPasswordReset(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/reset-password/request`, payload);
+  }
+
+  verifyPasswordReset(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/reset-password/verify`, payload);
+  }
+
   // ==========================================
   // LOG ENDPOINTS (Sistem Kayıtları)
   // ==========================================

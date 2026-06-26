@@ -156,6 +156,7 @@
     width: 16px;
     height: 16px;
     cursor: pointer;
+    user-select: none;
 }
 
 .login-toggle-mode {
