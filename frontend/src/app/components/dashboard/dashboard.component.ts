@@ -518,7 +518,27 @@ export class DashboardComponent implements OnInit {
         this.fetchReceiptsList();
 
         setTimeout(() => {
-          this.clearForm();
+          if (this.isPdf && this.currentPageIndex < this.pdfPageCount - 1) {
+            // Reset input fields for the next page
+            this.receiptId = null;
+            this.merchantName = '';
+            this.vknTckn = '';
+            this.receiptDate = new Date().toISOString().substring(0, 10);
+            this.receiptNo = '';
+            
+            this.kdv1 = 0; this.matrah1 = 0; this.total1 = 0;
+            this.kdv10 = 0; this.matrah10 = 0; this.total10 = 0;
+            this.kdv20 = 0; this.matrah20 = 0; this.total20 = 0;
+            
+            this.totalAmount = 0;
+            this.taxAmount = 0;
+            
+            this.imagePath = null;
+
+            this.goToNextPage();
+          } else {
+            this.clearForm();
+          }
           this.cdr.detectChanges();
         }, 1200);
       },
