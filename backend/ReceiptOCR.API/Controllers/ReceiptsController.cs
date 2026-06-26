@@ -170,36 +170,151 @@ namespace ReceiptOCR.API.Controllers
             }
         }
 
-        // 1. API: Image upload and OCR processing
+        // 1. API: Image/PDF upload and OCR processing
         [HttpPost("upload")]
         public async Task<IActionResult> UploadImage(IFormFile file)
         {
             if (file == null || file.Length == 0)
             {
-                WriteLog("Guest", "OCR_Okuma", "ERROR", "Boş resim yükleme denemesi.");
+                WriteLog("Guest", "OCR_Okuma", "ERROR", "Boş resim/PDF yükleme denemesi.");
                 return BadRequest("Resim seçilmedi.");
             }
 
-            WriteLog("Guest", "OCR_Okuma", "INFO", $"Yeni bir fiş resmi yükleniyor: {file.FileName}");
+            WriteLog("Guest", "OCR_Okuma", "INFO", $"Yeni bir fiş dosyası yükleniyor: {file.FileName} ({file.ContentType})");
 
             try
             {
-                // Run image preprocessing (resizing + saving)
-                using var stream = file.OpenReadStream();
-                var preprocessResult = await _preprocessingService.ProcessAsync(stream, file.FileName);
+                var extension = Path.GetExtension(file.FileName).ToLower();
+                if (extension == ".pdf" || file.ContentType == "application/pdf")
+                {
+                    // Copy to memory stream to ensure seekability
+                    using var ms = new MemoryStream();
+                    await file.CopyToAsync(ms);
+                    ms.Position = 0;
 
-                string relativePath = $"data/{preprocessResult.ProcessedFileName}";
-                string absolutePath = Path.Combine(BaseDir, preprocessResult.ProcessedFileName);
+                    int pageCount = 0;
+                    try
+                    {
+                        pageCount = PDFtoImage.Conversion.GetPageCount(ms);
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLog("Guest", "PDF_Açma", "ERROR", $"PDF sayfa sayısı okunamadı: {ex.Message}");
+                        return BadRequest($"PDF dosyası açılamadı: {ex.Message}");
+                    }
 
-                // Read bytes of optimized image
+                    if (pageCount == 0)
+                    {
+                        return BadRequest("PDF dosyasında sayfa bulunamadı.");
+                    }
+
+                    var pdfPages = new List<string>();
+
+                    // Convert all pages to JPEGs
+                    for (int i = 0; i < pageCount; i++)
+                    {
+                        var pageFileName = $"processed_{Guid.NewGuid()}_page_{i}.jpeg";
+                        var pagePath = Path.Combine(BaseDir, pageFileName);
+
+                        ms.Position = 0; // Reset position
+                        PDFtoImage.Conversion.SaveJpeg(pagePath, ms, i, options: new(Dpi: 150));
+
+                        pdfPages.Add($"data/{pageFileName}");
+                    }
+
+                    // Run OCR on the first page
+                    var firstPagePath = Path.Combine(BaseDir, Path.GetFileName(pdfPages[0]));
+                    byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(firstPagePath);
+                    var parsedData = await _geminiService.ScanReceiptAsync(imageBytes, "image/jpeg");
+
+                    WriteLog("Guest", "OCR_Okuma", "SUCCESS", $"Gemini OCR başarıyla tamamlandı (PDF Sayfa 1). Algılanan Mağaza: {parsedData.MerchantName}");
+
+                    return Ok(new
+                    {
+                        merchant_name = parsedData.MerchantName,
+                        vkn_tckn = parsedData.VknTckn ?? "",
+                        receipt_date = parsedData.ReceiptDate,
+                        receipt_no = parsedData.ReceiptNo ?? "",
+                        total_amount = parsedData.TotalAmount,
+                        tax_amount = parsedData.TaxAmount,
+                        matrah1 = parsedData.Matrah1,
+                        kdv1 = parsedData.Kdv1,
+                        matrah10 = parsedData.Matrah10,
+                        kdv10 = parsedData.Kdv10,
+                        matrah20 = parsedData.Matrah20,
+                        kdv20 = parsedData.Kdv20,
+                        image_path = pdfPages[0],
+                        pdf_pages = pdfPages,
+                        pdf_page_count = pageCount,
+                        current_page = 0,
+                        items = new string[] {}
+                    });
+                }
+                else
+                {
+                    // Run image preprocessing (resizing + saving)
+                    using var stream = file.OpenReadStream();
+                    var preprocessResult = await _preprocessingService.ProcessAsync(stream, file.FileName);
+
+                    string relativePath = $"data/{preprocessResult.ProcessedFileName}";
+                    string absolutePath = Path.Combine(BaseDir, preprocessResult.ProcessedFileName);
+
+                    // Read bytes of optimized image
+                    byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(absolutePath);
+
+                    // Call Gemini for real OCR extraction
+                    var parsedData = await _geminiService.ScanReceiptAsync(imageBytes, file.ContentType);
+
+                    WriteLog("Guest", "OCR_Okuma", "SUCCESS", $"Gemini OCR başarıyla tamamlandı. Algılanan Mağaza: {parsedData.MerchantName}");
+
+                    // Returns properties matching frontend Receipt models
+                    return Ok(new
+                    {
+                        merchant_name = parsedData.MerchantName,
+                        vkn_tckn = parsedData.VknTckn ?? "",
+                        receipt_date = parsedData.ReceiptDate,
+                        receipt_no = parsedData.ReceiptNo ?? "",
+                        total_amount = parsedData.TotalAmount,
+                        tax_amount = parsedData.TaxAmount,
+                        matrah1 = parsedData.Matrah1,
+                        kdv1 = parsedData.Kdv1,
+                        matrah10 = parsedData.Matrah10,
+                        kdv10 = parsedData.Kdv10,
+                        matrah20 = parsedData.Matrah20,
+                        kdv20 = parsedData.Kdv20,
+                        image_path = relativePath,
+                        items = new string[] {}
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLog("Guest", "OCR_Okuma", "ERROR", $"OCR Okuma hatası: {ex.Message}");
+                return StatusCode(500, $"Yapay zeka okuma hatası: {ex.Message}");
+            }
+        }
+
+        [HttpPost("ocr-image")]
+        public async Task<IActionResult> RunOcrOnImage([FromBody] OcrImageRequest request)
+        {
+            if (string.IsNullOrEmpty(request.ImagePath))
+            {
+                return BadRequest("Image path is required.");
+            }
+
+            try
+            {
+                var filename = Path.GetFileName(request.ImagePath);
+                var absolutePath = Path.Combine(BaseDir, filename);
+
+                if (!System.IO.File.Exists(absolutePath))
+                {
+                    return NotFound("Image file not found.");
+                }
+
                 byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(absolutePath);
+                var parsedData = await _geminiService.ScanReceiptAsync(imageBytes, "image/jpeg");
 
-                // Call Gemini for real OCR extraction
-                var parsedData = await _geminiService.ScanReceiptAsync(imageBytes, file.ContentType);
-
-                WriteLog("Guest", "OCR_Okuma", "SUCCESS", $"Gemini OCR başarıyla tamamlandı. Algılanan Mağaza: {parsedData.MerchantName}");
-
-                // Returns properties matching frontend Receipt models
                 return Ok(new
                 {
                     merchant_name = parsedData.MerchantName,
@@ -214,13 +329,12 @@ namespace ReceiptOCR.API.Controllers
                     kdv10 = parsedData.Kdv10,
                     matrah20 = parsedData.Matrah20,
                     kdv20 = parsedData.Kdv20,
-                    image_path = relativePath,
-                    items = new string[] {}
+                    image_path = request.ImagePath
                 });
             }
             catch (Exception ex)
             {
-                WriteLog("Guest", "OCR_Okuma", "ERROR", $"OCR Okuma hatası: {ex.Message}");
+                WriteLog("Guest", "OCR_Okuma", "ERROR", $"Görsel OCR okuma hatası: {ex.Message}");
                 return StatusCode(500, $"Yapay zeka okuma hatası: {ex.Message}");
             }
         }
@@ -484,6 +598,11 @@ namespace ReceiptOCR.API.Controllers
             var bytes = System.IO.File.ReadAllBytes(userExcelFile);
             return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"fis_raporu_{targetUser}.xlsx");
         }
+    }
+
+    public class OcrImageRequest
+    {
+        public string ImagePath { get; set; } = string.Empty;
     }
 
     // DTO for saving/updating receipts sent from the frontend

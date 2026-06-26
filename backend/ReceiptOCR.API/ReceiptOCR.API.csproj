@@ -18,6 +18,7 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.4" />
     <PackageReference Include="EPPlus" Version="7.1.2" />
     <PackageReference Include="SixLabors.ImageSharp" Version="2.1.9" />
+    <PackageReference Include="PDFtoImage" Version="5.2.1" />
   </ItemGroup>
 
 </Project>

@@ -61,6 +61,13 @@ export class DashboardComponent implements OnInit {
   taxAmount: number = 0;
   imagePath: string | null = null;
   
+  // PDF Pagination State
+  isPdf: boolean = false;
+  pdfPages: string[] = [];
+  pdfPageCount: number = 0;
+  currentPageIndex: number = 0;
+  loadingPageOcr: boolean = false;
+  
   statusMessage: string = '';
   statusType: 'success' | 'info' | 'error' | null = null;
 
@@ -124,10 +131,11 @@ export class DashboardComponent implements OnInit {
     // 1. Dosya sürüklenip bırakıldıysa (Local File Explorer)
     if (dt.files && dt.files.length > 0) {
       const file = dt.files[0];
-      if (file.type.startsWith('image/')) {
+      const isPdfFile = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (file.type.startsWith('image/') || isPdfFile) {
         this.processImageFile(file);
       } else {
-        this.showStatus('Lütfen sadece görsel dosyası yükleyin.', 'error');
+        this.showStatus('Lütfen sadece görsel veya PDF dosyası yükleyin.', 'error');
       }
       return;
     }
@@ -164,12 +172,19 @@ export class DashboardComponent implements OnInit {
   processImageFile(file: File): void {
     this.selectedFile = file;
     
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      this.previewUrl = e.target.result;
-      this.cdr.detectChanges();
-    };
-    reader.readAsDataURL(file);
+    const isPdfFile = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (isPdfFile) {
+      this.previewUrl = null;
+      this.isPdf = true;
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.previewUrl = e.target.result;
+        this.cdr.detectChanges();
+      };
+      reader.readAsDataURL(file);
+      this.isPdf = false;
+    }
 
     this.showStatus('Dosya yükleniyor ve Gemini OCR tarafından çözümleniyor...', 'info');
     this.cdr.detectChanges();
@@ -207,6 +222,20 @@ export class DashboardComponent implements OnInit {
           this.total20 = this.totalAmount;
         }
         
+        // Check if it's a PDF response with multiple pages
+        if (res.pdf_pages && res.pdf_pages.length > 0) {
+          this.isPdf = true;
+          this.pdfPages = res.pdf_pages;
+          this.pdfPageCount = res.pdf_page_count;
+          this.currentPageIndex = res.current_page || 0;
+          this.previewUrl = `http://localhost:5000/${res.image_path}`;
+        } else {
+          this.isPdf = false;
+          this.pdfPages = [];
+          this.pdfPageCount = 0;
+          this.currentPageIndex = 0;
+        }
+
         this.imagePath = res.image_path || res.imagePath || null;
 
         this.showPreview = true;
@@ -288,7 +317,85 @@ export class DashboardComponent implements OnInit {
     this.taxAmount = 0;
     
     this.imagePath = null;
+    
+    this.isPdf = false;
+    this.pdfPages = [];
+    this.pdfPageCount = 0;
+    this.currentPageIndex = 0;
+    this.loadingPageOcr = false;
+
     this.resetInput();
+  }
+
+  goToNextPage(): void {
+    if (this.currentPageIndex < this.pdfPageCount - 1) {
+      this.changePdfPage(this.currentPageIndex + 1);
+    }
+  }
+
+  goToPrevPage(): void {
+    if (this.currentPageIndex > 0) {
+      this.changePdfPage(this.currentPageIndex - 1);
+    }
+  }
+
+  changePdfPage(index: number): void {
+    if (index < 0 || index >= this.pdfPageCount) return;
+    this.currentPageIndex = index;
+    const pagePath = this.pdfPages[index];
+    this.previewUrl = `http://localhost:5000/${pagePath}`;
+    
+    this.loadingPageOcr = true;
+    this.showStatus(`Sayfa ${index + 1} yükleniyor ve Gemini OCR tarafından çözümleniyor...`, 'info');
+    this.cdr.detectChanges();
+
+    this.apiService.scanPageImage(pagePath).subscribe({
+      next: (res) => {
+        this.merchantName = res.merchant_name || res.merchantName || '';
+        this.vknTckn = res.vkn_tckn || res.vknTckn || '';
+        this.receiptDate = res.receipt_date || res.receiptDate || '';
+        this.receiptNo = res.receipt_no || res.receiptNo || '';
+        
+        const total = res.total_amount || res.totalAmount || 0;
+        const tax = res.tax_amount || res.taxAmount || 0;
+        
+        this.matrah1 = res.matrah1 !== undefined ? res.matrah1 : (res.matrah_1 || 0);
+        this.kdv1 = res.kdv1 !== undefined ? res.kdv1 : (res.kdv_1 || 0);
+        this.total1 = this.matrah1 + this.kdv1;
+        
+        this.matrah10 = res.matrah10 !== undefined ? res.matrah10 : (res.matrah_10 || 0);
+        this.kdv10 = res.kdv10 !== undefined ? res.kdv10 : (res.kdv_10 || 0);
+        this.total10 = this.matrah10 + this.kdv10;
+        
+        this.matrah20 = res.matrah20 !== undefined ? res.matrah20 : (res.matrah_20 || 0);
+        this.kdv20 = res.kdv20 !== undefined ? res.kdv20 : (res.kdv_20 || 0);
+        this.total20 = this.matrah20 + this.kdv20;
+        
+        this.totalAmount = total;
+        this.taxAmount = tax;
+        
+        if (this.totalAmount > 0 && this.total1 === 0 && this.total10 === 0 && this.total20 === 0) {
+          this.kdv20 = this.taxAmount;
+          this.matrah20 = this.totalAmount - this.taxAmount;
+          this.total20 = this.totalAmount;
+        }
+
+        this.imagePath = res.image_path || res.imagePath || null;
+        this.loadingPageOcr = false;
+        
+        this.showStatus(`Sayfa ${index + 1} OCR tamamlandı!`, 'success');
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.clearStatus();
+          this.cdr.detectChanges();
+        }, 2500);
+      },
+      error: (err) => {
+        this.loadingPageOcr = false;
+        this.showStatus('Görüntü okunamadı: ' + err.message, 'error');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onKdvRowChange(rate: number): void {
@@ -486,6 +593,12 @@ export class DashboardComponent implements OnInit {
         this.kdv1 = 0; this.matrah1 = 0; this.total1 = 0;
         this.kdv10 = 0; this.matrah10 = 0; this.total10 = 0;
         this.kdv20 = 0; this.matrah20 = 0; this.total20 = 0;
+
+        this.isPdf = false;
+        this.pdfPages = [];
+        this.pdfPageCount = 0;
+        this.currentPageIndex = 0;
+        this.loadingPageOcr = false;
 
         if (rate === 1) {
           this.kdv1 = tax;

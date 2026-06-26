@@ -38,6 +38,10 @@ export class ApiService {
     return this.http.put<any>(`${this.baseUrl}/receipts/${id}`, receipt);
   }
 
+  scanPageImage(imagePath: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/receipts/ocr-image`, { imagePath });
+  }
+
   // ==========================================================
   // AUTH ENDPOINTS (Kullanıcı Girişi ve Kayıt)
   // ==========================================================

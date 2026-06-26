@@ -36,10 +36,10 @@
              (drop)="onDrop($event)"
              [class.drag-active]="isDragActive">
           <span class="upload-icon">☁️</span>
-          <h3>Görsel Sürükleyin veya Seçin</h3>
-          <p>Desteklenen formatlar: PNG, JPG, JPEG</p>
+          <h3>Görsel veya PDF Sürükleyin veya Seçin</h3>
+          <p>Desteklenen formatlar: PNG, JPG, JPEG, PDF</p>
           <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 10px;">Dosya Seç</button>
-          <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*" style="display: none;" />
+          <input #fileInput type="file" (change)="onFileSelected($event)" accept="image/*,.pdf" style="display: none;" />
         </div>
       </div>
 
@@ -62,6 +62,19 @@
           <button type="button" class="btn btn-secondary btn-xs" (click)="zoomIn()">➕ Yaklaştır</button>
           <button type="button" class="btn btn-secondary btn-xs" (click)="zoomOut()">➖ Uzaklaştır</button>
           <button type="button" class="btn btn-secondary btn-xs" (click)="resetZoom()">🔄 Sıfırla</button>
+        </div>
+
+        <!-- PDF Sayfa Kontrolleri -->
+        <div class="pdf-pagination-controls" *ngIf="isPdf && pdfPageCount > 1" style="display: flex; align-items: center; justify-content: center; margin-top: 15px; margin-bottom: 5px; gap: 12px; padding: 8px; background: rgba(248, 250, 252, 0.8); border: 1px solid var(--panel-border, #e2e8f0); border-radius: 8px; backdrop-filter: blur(4px);">
+          <button type="button" class="btn btn-secondary btn-sm" [disabled]="currentPageIndex === 0 || loadingPageOcr" (click)="goToPrevPage()" style="display: flex; align-items: center; gap: 4px; min-width: 90px; justify-content: center;">
+            ◀ Önceki
+          </button>
+          <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main, #1e293b); min-width: 60px; text-align: center;">
+            📄 {{ currentPageIndex + 1 }} / {{ pdfPageCount }}
+          </span>
+          <button type="button" class="btn btn-secondary btn-sm" [disabled]="currentPageIndex === pdfPageCount - 1 || loadingPageOcr" (click)="goToNextPage()" style="display: flex; align-items: center; gap: 4px; min-width: 90px; justify-content: center;">
+            Sonraki ▶
+          </button>
         </div>
 
         <button class="btn btn-secondary btn-block" (click)="resetInput()" style="margin-top: 15px;">
