@@ -187,15 +187,19 @@ namespace ReceiptOCR.API.Controllers
                 var extension = Path.GetExtension(file.FileName).ToLower();
                 if (extension == ".pdf" || file.ContentType == "application/pdf")
                 {
-                    // Copy to memory stream to ensure seekability
-                    using var ms = new MemoryStream();
-                    await file.CopyToAsync(ms);
-                    ms.Position = 0;
+                    // Read PDF into byte array so we can open fresh streams for each operation (avoiding Closed Stream errors)
+                    byte[] pdfBytes;
+                    using (var tempMs = new MemoryStream())
+                    {
+                        await file.CopyToAsync(tempMs);
+                        pdfBytes = tempMs.ToArray();
+                    }
 
                     int pageCount = 0;
                     try
                     {
-                        pageCount = PDFtoImage.Conversion.GetPageCount(ms);
+                        using var msForCount = new MemoryStream(pdfBytes);
+                        pageCount = PDFtoImage.Conversion.GetPageCount(msForCount);
                     }
                     catch (Exception ex)
                     {
@@ -216,8 +220,8 @@ namespace ReceiptOCR.API.Controllers
                         var pageFileName = $"processed_{Guid.NewGuid()}_page_{i}.jpeg";
                         var pagePath = Path.Combine(BaseDir, pageFileName);
 
-                        ms.Position = 0; // Reset position
-                        PDFtoImage.Conversion.SaveJpeg(pagePath, ms, i, options: new(Dpi: 150));
+                        using var msForSave = new MemoryStream(pdfBytes);
+                        PDFtoImage.Conversion.SaveJpeg(pagePath, msForSave, i, options: new(Dpi: 150));
 
                         pdfPages.Add($"data/{pageFileName}");
                     }
