@@ -114,7 +114,7 @@ namespace ReceiptOCR.API.Controllers
             var code = random.Next(100000, 999999).ToString();
 
             user.EmailResetCode = code;
-            user.EmailResetExpiry = DateTime.UtcNow.AddMinutes(10); // 10 minutes expiry
+            user.EmailResetExpiry = DateTime.Now.AddMinutes(10); // 10 minutes expiry
 
             await _context.SaveChangesAsync();
 
@@ -157,7 +157,7 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.UtcNow)
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.Now)
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
@@ -188,7 +188,7 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.UtcNow)
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.Now)
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
