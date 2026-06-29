@@ -114,7 +114,7 @@ namespace ReceiptOCR.API.Controllers
             var code = random.Next(100000, 999999).ToString();
 
             user.EmailResetCode = code;
-            user.EmailResetExpiry = DateTime.Now.AddMinutes(10); // 10 minutes expiry
+            user.EmailResetExpiry = GetIstanbulTime().AddMinutes(1); // 1 minute expiry
 
             await _context.SaveChangesAsync();
 
@@ -157,7 +157,7 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.Now)
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < GetIstanbulTime())
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
@@ -188,7 +188,7 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.Now)
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < GetIstanbulTime())
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
@@ -203,6 +203,20 @@ namespace ReceiptOCR.API.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz." });
+        }
+
+        private DateTime GetIstanbulTime()
+        {
+            TimeZoneInfo istanbulTimeZone;
+            try
+            {
+                istanbulTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                istanbulTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+            }
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istanbulTimeZone);
         }
 
         private string HashPassword(string password)
