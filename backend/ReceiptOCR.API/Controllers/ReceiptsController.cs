@@ -419,10 +419,26 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound("Fiş bulunamadı.");
             }
 
-            var itemsList = new List<GeminiReceiptItemResponse>();
+            decimal matrah1 = 0, kdv1 = 0;
+            decimal matrah10 = 0, kdv10 = 0;
+            decimal matrah20 = 0, kdv20 = 0;
+
             if (!string.IsNullOrEmpty(expense.ItemsJson))
             {
-                itemsList = JsonSerializer.Deserialize<List<GeminiReceiptItemResponse>>(expense.ItemsJson) ?? new();
+                try
+                {
+                    var vatItems = JsonSerializer.Deserialize<List<VatBreakdownItem>>(expense.ItemsJson);
+                    if (vatItems != null)
+                    {
+                        foreach (var item in vatItems)
+                        {
+                            if (item.KdvOrani == 1) { matrah1 = item.Matrah; kdv1 = item.Kdv; }
+                            else if (item.KdvOrani == 10) { matrah10 = item.Matrah; kdv10 = item.Kdv; }
+                            else if (item.KdvOrani == 20) { matrah20 = item.Matrah; kdv20 = item.Kdv; }
+                        }
+                    }
+                }
+                catch { }
             }
 
             // Respond as a structured Receipt object with items array
@@ -439,6 +455,12 @@ namespace ReceiptOCR.API.Controllers
                 imagePath = expense.ImagePath,
                 createdAt = expense.CreatedDate,
                 createdBy = expense.KaydedenKullanici,
+                matrah1,
+                kdv1,
+                matrah10,
+                kdv10,
+                matrah20,
+                kdv20,
                 items = new string[] {}
             });
         }

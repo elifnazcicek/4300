@@ -626,18 +626,38 @@ export class DashboardComponent implements OnInit {
         this.currentPageIndex = 0;
         this.loadingPageOcr = false;
 
-        if (rate === 1) {
-          this.kdv1 = tax;
-          this.matrah1 = total - tax;
-          this.total1 = total;
-        } else if (rate === 10) {
-          this.kdv10 = tax;
-          this.matrah10 = total - tax;
-          this.total10 = total;
-        } else { // 20
-          this.kdv20 = tax;
-          this.matrah20 = total - tax;
-          this.total20 = total;
+        // Set individual rates if they are returned by backend
+        if (data.matrah1 > 0 || data.kdv1 > 0) {
+          this.kdv1 = data.kdv1;
+          this.matrah1 = data.matrah1;
+          this.total1 = data.matrah1 + data.kdv1;
+        }
+        if (data.matrah10 > 0 || data.kdv10 > 0) {
+          this.kdv10 = data.kdv10;
+          this.matrah10 = data.matrah10;
+          this.total10 = data.matrah10 + data.kdv10;
+        }
+        if (data.matrah20 > 0 || data.kdv20 > 0) {
+          this.kdv20 = data.kdv20;
+          this.matrah20 = data.matrah20;
+          this.total20 = data.matrah20 + data.kdv20;
+        }
+
+        // If none of them are set, fallback to original single-row logic
+        if (this.total1 === 0 && this.total10 === 0 && this.total20 === 0) {
+          if (rate === 1) {
+            this.kdv1 = tax;
+            this.matrah1 = total - tax;
+            this.total1 = total;
+          } else if (rate === 10) {
+            this.kdv10 = tax;
+            this.matrah10 = total - tax;
+            this.total10 = total;
+          } else { // 20
+            this.kdv20 = tax;
+            this.matrah20 = total - tax;
+            this.total20 = total;
+          }
         }
 
         this.totalAmount = total;

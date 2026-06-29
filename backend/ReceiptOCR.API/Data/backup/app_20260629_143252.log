@@ -147,8 +147,3 @@
 2026-06-29 14:32:52 [INFO] User: edit, Action: Veri_Güncelleme, Details: Fiş güncelleme isteği alındı. ID: 36, Mağaza: CAGRI MAGAZACILIK A.S.
 2026-06-29 14:32:52 [SUCCESS] User: edit, Action: Veri_Güncelleme, Details: Fiş başarıyla güncellendi. ID: 36
 2026-06-29 14:32:52 [SUCCESS] User: edit, Action: Excel_Kayıt, Details: Excel dosyası başarıyla güncellendi: fis_raporu_edit.xlsx
-2026-06-29 14:32:52 [SUCCESS] User: System, Action: Db_Backup, Details: Sistem logları başarıyla backup klasörüne yedeklendi. Yedek: app_20260629_143252.log
-2026-06-29 14:32:52 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
-2026-06-29 14:32:58 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 35
-2026-06-29 14:33:00 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 36
-2026-06-29 14:37:07 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
