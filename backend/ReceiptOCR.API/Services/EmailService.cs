@@ -29,6 +29,7 @@ namespace ReceiptOCR.API.Services
 
                 using (var client = new SmtpClient(smtpServer, smtpPort))
                 {
+                    client.Timeout = 5000; // 5 seconds timeout to prevent long hangs
                     client.EnableSsl = true;
                     client.UseDefaultCredentials = false;
                     client.Credentials = new NetworkCredential(smtpUser, smtpPass);
@@ -41,7 +42,7 @@ namespace ReceiptOCR.API.Services
                         <h3>Şifre Sıfırlama Talebi</h3>
                         <p>Hesabınız için şifre sıfırlama talebinde bulunuldu. Şifrenizi yenilemek için kullanacağınız 6 haneli doğrulama kodu aşağıdadır:</p>
                         <h2 style='color: #4f46e5; letter-spacing: 2px;'>{code}</h2>
-                        <p>Bu kod 10 dakika süreyle geçerlidir. Eğer bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız.</p>
+                        <p>Bu kod 1 dakika süreyle geçerlidir. Eğer bu talebi siz yapmadıysanız bu e-postayı dikkate almayınız.</p>
                         ",
                         IsBodyHtml = true
                     };
