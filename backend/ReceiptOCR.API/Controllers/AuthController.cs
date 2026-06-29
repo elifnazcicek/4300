@@ -68,8 +68,7 @@ namespace ReceiptOCR.API.Controllers
                 FullName = request.Username, // Varsayılan olarak username atanıyor
                 Role = "User",
                 IsActive = true,
-                CreatedDate = DateTime.UtcNow,
-                PhoneNumber = request.PhoneNumber
+                CreatedDate = DateTime.UtcNow
             };
 
             _context.Users.Add(user);
@@ -246,7 +245,6 @@ namespace ReceiptOCR.API.Controllers
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string? PhoneNumber { get; set; }
     }
 
     public class ForgotPasswordRequest

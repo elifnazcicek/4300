@@ -33,7 +33,7 @@ namespace ReceiptOCR.API.Controllers
                     u.FullName,
                     u.Role,
                     u.IsActive,
-                    u.PhoneNumber
+                    u.Email
                 })
                 .ToListAsync();
 
