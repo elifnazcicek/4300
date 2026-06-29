@@ -47,12 +47,12 @@ try
     // Gemini API servisi
     builder.Services.AddHttpClient<GeminiService>();
 
-    // CORS: Angular dev server (http://localhost:4200) erişimi için
+    // CORS: Angular dev server (http://localhost:4200 ve http://localhost:4300) erişimi için
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(policy =>
         {
-            policy.WithOrigins("http://localhost:4200")
+            policy.WithOrigins("http://localhost:4200", "http://localhost:4300")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
