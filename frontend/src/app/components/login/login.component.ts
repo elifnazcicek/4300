@@ -33,6 +33,8 @@ export class LoginComponent implements OnInit {
   resetErrorMessage = '';
   resetSuccessMessage = '';
   resetLoading = false;
+  resetCountdown = 60;
+  countdownInterval: any;
 
 
   constructor(private router: Router, private apiService: ApiService, private cdr: ChangeDetectorRef) {
@@ -189,12 +191,36 @@ export class LoginComponent implements OnInit {
     this.resetConfirmPassword = '';
     this.resetErrorMessage = '';
     this.resetSuccessMessage = '';
+    this.stopResetCountdown();
     this.cdr.detectChanges();
   }
 
   closeResetModal(): void {
     this.showResetModal = false;
+    this.stopResetCountdown();
     this.cdr.detectChanges();
+  }
+
+  startResetCountdown(): void {
+    this.resetCountdown = 60;
+    this.stopResetCountdown();
+    this.countdownInterval = setInterval(() => {
+      if (this.resetCountdown > 0) {
+        this.resetCountdown--;
+        this.cdr.detectChanges();
+      } else {
+        this.resetErrorMessage = 'Doğrulama kodunun süresi doldu. Lütfen tekrar yeni kod talep edin.';
+        this.stopResetCountdown();
+        this.cdr.detectChanges();
+      }
+    }, 1000);
+  }
+
+  stopResetCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
   }
 
   sendResetCode(): void {
@@ -213,6 +239,7 @@ export class LoginComponent implements OnInit {
         this.resetLoading = false;
         this.resetSuccessMessage = res.message || 'Doğrulama kodu e-postanıza gönderildi.';
         this.resetStep = 2;
+        this.startResetCountdown();
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -224,6 +251,11 @@ export class LoginComponent implements OnInit {
   }
 
   verifyResetCodeAndSetPassword(): void {
+    if (this.resetCountdown === 0) {
+      this.resetErrorMessage = 'Doğrulama kodunun süresi dolmuştur. Yeni bir kod talep etmelisiniz.';
+      return;
+    }
+
     if (!this.resetCode.trim() || !this.resetNewPassword.trim() || !this.resetConfirmPassword.trim()) {
       this.resetErrorMessage = 'Lütfen tüm alanları doldurun.';
       return;
@@ -254,6 +286,7 @@ export class LoginComponent implements OnInit {
       next: (res) => {
         this.resetLoading = false;
         this.resetSuccessMessage = res.message || 'Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.';
+        this.stopResetCountdown();
         this.cdr.detectChanges();
 
         setTimeout(() => {

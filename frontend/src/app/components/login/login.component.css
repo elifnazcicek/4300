@@ -310,3 +310,41 @@
     border: 1px solid #bbf7d0;
     color: #166534;
 }
+
+.timer-container {
+    display: flex;
+    justify-content: center;
+    margin: 5px 0 10px 0;
+}
+
+.timer-badge {
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--color-primary);
+    border: 1px solid rgba(79, 70, 229, 0.15);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.timer-badge.warning {
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
+    animation: timerPulse 0.8s infinite alternate;
+}
+
+.timer-badge.expired {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+@keyframes timerPulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
+}

@@ -141,6 +141,13 @@
 
       <!-- STEP 2: VERIFY CODE & RESET -->
       <div *ngIf="resetStep === 2">
+        <!-- Timer Badge -->
+        <div class="timer-container">
+          <span class="timer-badge" [class.warning]="resetCountdown <= 15" [class.expired]="resetCountdown === 0">
+            ⏱️ Kalan Süre: <strong>{{ resetCountdown }} sn</strong>
+          </span>
+        </div>
+
         <p class="modal-desc">E-posta adresinize gönderilen 6 haneli doğrulama kodunu ve yeni şifrenizi giriniz.</p>
         
         <div class="form-group">
