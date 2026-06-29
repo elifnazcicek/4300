@@ -157,7 +157,7 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < GetIstanbulTime())
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim())
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
@@ -188,7 +188,7 @@ namespace ReceiptOCR.API.Controllers
                 return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < GetIstanbulTime())
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim())
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
