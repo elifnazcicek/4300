@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.IO;
 
 namespace ReceiptOCR.API.Controllers
 {
@@ -17,6 +18,9 @@ namespace ReceiptOCR.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly ReceiptDbContext _context;
         private readonly Services.EmailService _emailService;
+
+        private static readonly string BaseDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
+        private static readonly string LogFile = Path.Combine(BaseDir, "app.log");
 
         public AuthController(IConfiguration configuration, ReceiptDbContext context, Services.EmailService emailService)
         {
@@ -42,6 +46,8 @@ namespace ReceiptOCR.API.Controllers
             }
 
             var token = GenerateJwtToken(user);
+
+            WriteLog(user.Username, "Kullanıcı Girişi", "SUCCESS", "Kullanıcı sisteme giriş yaptı.");
 
             return Ok(new AuthResponse
             {
@@ -73,6 +79,8 @@ namespace ReceiptOCR.API.Controllers
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
+            WriteLog(user.Username, "Kullanıcı Kaydı", "SUCCESS", $"Yeni kullanıcı kaydı oluşturuldu. Rol: {user.Role}");
 
             return Ok(new AuthResponse
             {
@@ -124,10 +132,12 @@ namespace ReceiptOCR.API.Controllers
             try
             {
                 await _emailService.SendResetCodeEmailAsync(user.Email, code);
+                WriteLog(user.Username, "Şifre Yenileme Talebi", "SUCCESS", $"Şifre yenileme kodu oluşturuldu ve e-posta adresine gönderildi. Alıcı: {user.Email}");
                 return Ok(new { Message = "Şifre yenileme kodunuz başarıyla e-posta adresinize gönderildi.", Email = user.Email });
             }
             catch (Exception ex)
             {
+                WriteLog(user.Username, "Şifre Yenileme Talebi", "WARNING", $"E-posta gönderimi başarısız oldu ({ex.InnerException?.Message ?? ex.Message}). Sunucu terminaline yazdırıldı.");
                 // Fallback for demo environments: return Ok but warn that email failed and code is in terminal
                 return Ok(new { 
                     Message = $"E-posta gönderilemedi ({ex.InnerException?.Message ?? ex.Message}). Ancak test/demo ortamı kolaylığı için şifre yenileme kodunuz sunucu konsoluna yazdırılmıştır. Lütfen konsoldan kodu alıp devam ediniz.", 
@@ -161,6 +171,8 @@ namespace ReceiptOCR.API.Controllers
             {
                 return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
             }
+
+            WriteLog(user.Username, "Şifre Yenileme Kodu Doğrulama", "SUCCESS", "Şifre sıfırlama doğrulama kodu başarıyla doğrulandı.");
 
             return Ok(new { Message = "Doğrulama kodu onaylandı. Yeni şifrenizi belirleyebilirsiniz." });
         }
@@ -201,6 +213,8 @@ namespace ReceiptOCR.API.Controllers
             user.EmailResetExpiry = null;
 
             await _context.SaveChangesAsync();
+
+            WriteLog(user.Username, "Şifre Değiştirme", "SUCCESS", "Kullanıcı şifresini başarıyla güncelledi (Şifre değiştirildi).");
 
             return Ok(new { Message = "Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz." });
         }
@@ -252,6 +266,31 @@ namespace ReceiptOCR.API.Controllers
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
+        }
+
+        private void WriteLog(string username, string actionType, string status, string details)
+        {
+            var logMessage = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{status}] User: {username}, Action: {actionType}, Details: {details}";
+            try
+            {
+                Directory.CreateDirectory(BaseDir);
+                System.IO.File.AppendAllText(LogFile, logMessage + Environment.NewLine, Encoding.UTF8);
+
+                var logEntry = new SystemLog
+                {
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Username = username,
+                    ActionType = actionType,
+                    Status = status,
+                    Details = details
+                };
+                _context.SystemLogs.Add(logEntry);
+                _context.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error writing log: {ex.Message}");
+            }
         }
     }
 
