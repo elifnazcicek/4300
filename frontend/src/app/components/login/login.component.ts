@@ -23,6 +23,18 @@ export class LoginComponent implements OnInit {
   successMessage = '';
   loading = false;
 
+  // Password reset modal state
+  showResetModal = false;
+  resetStep: 1 | 2 = 1;
+  resetEmailOrUsername = '';
+  resetCode = '';
+  resetNewPassword = '';
+  resetConfirmPassword = '';
+  resetErrorMessage = '';
+  resetSuccessMessage = '';
+  resetLoading = false;
+
+
   constructor(private router: Router, private apiService: ApiService, private cdr: ChangeDetectorRef) {
     // If already logged in, redirect straight to dashboard
     if (localStorage.getItem('isLoggedIn') === 'true') {
@@ -163,6 +175,97 @@ export class LoginComponent implements OnInit {
       error: (err) => {
         this.loading = false;
         this.errorMessage = err.error?.error || 'Bu kullanıcı adı zaten alınmış olabilir.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  openResetModal(): void {
+    this.showResetModal = true;
+    this.resetStep = 1;
+    this.resetEmailOrUsername = '';
+    this.resetCode = '';
+    this.resetNewPassword = '';
+    this.resetConfirmPassword = '';
+    this.resetErrorMessage = '';
+    this.resetSuccessMessage = '';
+    this.cdr.detectChanges();
+  }
+
+  closeResetModal(): void {
+    this.showResetModal = false;
+    this.cdr.detectChanges();
+  }
+
+  sendResetCode(): void {
+    if (!this.resetEmailOrUsername.trim()) {
+      this.resetErrorMessage = 'Lütfen kullanıcı adı veya e-posta giriniz.';
+      return;
+    }
+
+    this.resetLoading = true;
+    this.resetErrorMessage = '';
+    this.resetSuccessMessage = '';
+    this.cdr.detectChanges();
+
+    this.apiService.forgotPassword(this.resetEmailOrUsername.trim()).subscribe({
+      next: (res) => {
+        this.resetLoading = false;
+        this.resetSuccessMessage = res.message || 'Doğrulama kodu e-postanıza gönderildi.';
+        this.resetStep = 2;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.resetLoading = false;
+        this.resetErrorMessage = err.error?.message || 'E-posta gönderilirken bir hata oluştu.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  verifyResetCodeAndSetPassword(): void {
+    if (!this.resetCode.trim() || !this.resetNewPassword.trim() || !this.resetConfirmPassword.trim()) {
+      this.resetErrorMessage = 'Lütfen tüm alanları doldurun.';
+      return;
+    }
+
+    if (this.resetNewPassword !== this.resetConfirmPassword) {
+      this.resetErrorMessage = 'Şifreler eşleşmiyor.';
+      return;
+    }
+
+    if (this.resetNewPassword.length < 3) {
+      this.resetErrorMessage = 'Yeni şifre en az 3 karakter olmalıdır.';
+      return;
+    }
+
+    this.resetLoading = true;
+    this.resetErrorMessage = '';
+    this.resetSuccessMessage = '';
+    this.cdr.detectChanges();
+
+    const payload = {
+      emailOrUsername: this.resetEmailOrUsername.trim(),
+      code: this.resetCode.trim(),
+      newPassword: this.resetNewPassword
+    };
+
+    this.apiService.resetPassword(payload).subscribe({
+      next: (res) => {
+        this.resetLoading = false;
+        this.resetSuccessMessage = res.message || 'Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz.';
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.closeResetModal();
+          this.username = this.resetEmailOrUsername;
+          this.password = '';
+          this.cdr.detectChanges();
+        }, 2000);
+      },
+      error: (err) => {
+        this.resetLoading = false;
+        this.resetErrorMessage = err.error?.message || 'Şifre sıfırlanamadı. Lütfen doğrulama kodunu kontrol edin.';
         this.cdr.detectChanges();
       }
     });

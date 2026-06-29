@@ -12,5 +12,8 @@ namespace ReceiptOCR.API.Models
         public string? PhoneNumber { get; set; }
         public string? SmsOtpCode { get; set; }
         public DateTime? SmsOtpExpiry { get; set; }
+        public string? Email { get; set; }
+        public string? EmailResetCode { get; set; }
+        public DateTime? EmailResetExpiry { get; set; }
     }
 }

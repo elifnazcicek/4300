@@ -47,6 +47,9 @@ try
     // Gemini API servisi
     builder.Services.AddHttpClient<GeminiService>();
 
+    // E-posta gönderim servisi
+    builder.Services.AddScoped<EmailService>();
+
     // CORS: Angular dev server (http://localhost:4200 ve http://localhost:4300) erişimi için
     builder.Services.AddCors(options =>
     {

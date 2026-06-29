@@ -53,12 +53,16 @@ export class ApiService {
     return this.http.post<any>(`${this.baseUrl}/auth/register`, credentials);
   }
 
-  requestPasswordReset(payload: any): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/auth/reset-password/request`, payload);
+  forgotPassword(emailOrUsername: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/forgot-password`, { emailOrUsername });
   }
 
-  verifyPasswordReset(payload: any): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/auth/reset-password/verify`, payload);
+  verifyResetCode(emailOrUsername: string, code: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/verify-reset-code`, { emailOrUsername, code });
+  }
+
+  resetPassword(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/auth/reset-password`, payload);
   }
 
   // ==========================================

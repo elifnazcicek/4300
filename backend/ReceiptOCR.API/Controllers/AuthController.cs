@@ -16,11 +16,13 @@ namespace ReceiptOCR.API.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ReceiptDbContext _context;
+        private readonly Services.EmailService _emailService;
 
-        public AuthController(IConfiguration configuration, ReceiptDbContext context)
+        public AuthController(IConfiguration configuration, ReceiptDbContext context, Services.EmailService emailService)
         {
             _configuration = configuration;
             _context = context;
+            _emailService = emailService;
         }
 
         [HttpPost("login")]
@@ -82,83 +84,126 @@ namespace ReceiptOCR.API.Controllers
             });
         }
 
-        [HttpPost("reset-password/request")]
-        public async Task<IActionResult> RequestPasswordReset([FromBody] ResetPasswordRequestDto request)
-        {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.PhoneNumber))
-                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı ve telefon numarası zorunludur." });
 
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username.ToLower() == request.Username.ToLower());
+        // POST: api/auth/forgot-password
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.EmailOrUsername))
+            {
+                return BadRequest(new { Message = "E-posta veya kullanıcı adı gereklidir." });
+            }
+
+            var query = request.EmailOrUsername.Trim().ToLower();
+            var user = await _context.Users.FirstOrDefaultAsync(u => 
+                u.Username.ToLower() == query || 
+                (u.Email != null && u.Email.ToLower() == query)
+            );
 
             if (user == null)
             {
-                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya telefon numarası hatalı." });
+                return NotFound(new { Message = "Sistemde bu kullanıcı adı veya e-posta adresi ile eşleşen bir kayıt bulunamadı." });
             }
 
-            // Normalise phone numbers
-            var dbPhone = new string(user.PhoneNumber?.Where(char.IsDigit).ToArray() ?? Array.Empty<char>());
-            var reqPhone = new string(request.PhoneNumber.Where(char.IsDigit).ToArray());
-
-            if (string.IsNullOrEmpty(dbPhone) || dbPhone != reqPhone)
+            if (string.IsNullOrEmpty(user.Email))
             {
-                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya telefon numarası hatalı." });
+                return BadRequest(new { Message = "Bu kullanıcının sistemde tanımlı bir e-posta adresi bulunmamaktadır. Lütfen yöneticinizle irtibata geçin." });
             }
 
-            // Generate 6-digit random code
+            // Generate 6 digit random numeric code
             var random = new Random();
-            var otpCode = random.Next(100000, 999999).ToString();
+            var code = random.Next(100000, 999999).ToString();
 
-            // Set expiry (5 minutes)
-            user.SmsOtpCode = otpCode;
-            user.SmsOtpExpiry = DateTime.UtcNow.AddMinutes(5);
+            user.EmailResetCode = code;
+            user.EmailResetExpiry = DateTime.UtcNow.AddMinutes(10); // 10 minutes expiry
 
             await _context.SaveChangesAsync();
 
-            // Simulating SMS gateway send
-            Console.WriteLine($"\n[SMS GATEWAY] OTP for user '{user.Username}' sent to '{user.PhoneNumber}': {otpCode}\n");
+            // Log code to server console for testing/debugging
+            Console.WriteLine($"\n\n[TEST/DEMO UYARISI] Şifre Sıfırlama Kodu (Kullanıcı: {user.Username}): {code}\n\n");
 
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Doğrulama kodu telefonunuza gönderildi.",
-                OtpCode = otpCode 
-            });
+                await _emailService.SendResetCodeEmailAsync(user.Email, code);
+                return Ok(new { Message = "Şifre yenileme kodunuz başarıyla e-posta adresinize gönderildi.", Email = user.Email });
+            }
+            catch (Exception ex)
+            {
+                // Fallback for demo environments: return Ok but warn that email failed and code is in terminal
+                return Ok(new { 
+                    Message = $"E-posta gönderilemedi ({ex.InnerException?.Message ?? ex.Message}). Ancak test/demo ortamı kolaylığı için şifre yenileme kodunuz sunucu konsoluna yazdırılmıştır. Lütfen konsoldan kodu alıp devam ediniz.", 
+                    Email = user.Email,
+                    IsDemo = true
+                });
+            }
         }
 
-        [HttpPost("reset-password/verify")]
-        public async Task<IActionResult> VerifyPasswordReset([FromBody] ResetPasswordVerifyDto request)
+        // POST: api/auth/verify-reset-code
+        [HttpPost("verify-reset-code")]
+        public async Task<IActionResult> VerifyResetCode([FromBody] VerifyResetCodeRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.OtpCode) || string.IsNullOrWhiteSpace(request.NewPassword))
-                return BadRequest(new AuthResponse { Success = false, Error = "Tüm alanlar zorunludur." });
-
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username.ToLower() == request.Username.ToLower());
-
-            if (user == null || user.SmsOtpCode != request.OtpCode)
+            if (request == null || string.IsNullOrWhiteSpace(request.EmailOrUsername) || string.IsNullOrWhiteSpace(request.Code))
             {
-                return BadRequest(new AuthResponse { Success = false, Error = "Doğrulama kodu hatalı." });
+                return BadRequest(new { Message = "E-posta/kullanıcı adı ve doğrulama kodu zorunludur." });
             }
 
-            if (user.SmsOtpExpiry == null || user.SmsOtpExpiry < DateTime.UtcNow)
+            var query = request.EmailOrUsername.Trim().ToLower();
+            var user = await _context.Users.FirstOrDefaultAsync(u => 
+                u.Username.ToLower() == query || 
+                (u.Email != null && u.Email.ToLower() == query)
+            );
+
+            if (user == null)
             {
-                return BadRequest(new AuthResponse { Success = false, Error = "Doğrulama kodunun süresi dolmuş." });
+                return NotFound(new { Message = "Kullanıcı bulunamadı." });
             }
 
-            // Reset password
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.UtcNow)
+            {
+                return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
+            }
+
+            return Ok(new { Message = "Doğrulama kodu onaylandı. Yeni şifrenizi belirleyebilirsiniz." });
+        }
+
+        // POST: api/auth/reset-password
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (request == null || 
+                string.IsNullOrWhiteSpace(request.EmailOrUsername) || 
+                string.IsNullOrWhiteSpace(request.Code) || 
+                string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest(new { Message = "Tüm alanlar zorunludur." });
+            }
+
+            var query = request.EmailOrUsername.Trim().ToLower();
+            var user = await _context.Users.FirstOrDefaultAsync(u => 
+                u.Username.ToLower() == query || 
+                (u.Email != null && u.Email.ToLower() == query)
+            );
+
+            if (user == null)
+            {
+                return NotFound(new { Message = "Kullanıcı bulunamadı." });
+            }
+
+            if (user.EmailResetCode == null || user.EmailResetCode != request.Code.Trim() || user.EmailResetExpiry < DateTime.UtcNow)
+            {
+                return BadRequest(new { Message = "Geçersiz veya süresi dolmuş doğrulama kodu." });
+            }
+
+            // Update password
             user.PasswordHash = HashPassword(request.NewPassword);
-            user.SmsOtpCode = null;
-            user.SmsOtpExpiry = null;
+            
+            // Clear verification code
+            user.EmailResetCode = null;
+            user.EmailResetExpiry = null;
 
             await _context.SaveChangesAsync();
 
-            return Ok(new AuthResponse
-            {
-                Success = true,
-                Username = user.Username,
-                Token = GenerateJwtToken(user),
-                Role = user.Role
-            });
+            return Ok(new { Message = "Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz." });
         }
 
         private string HashPassword(string password)
@@ -204,16 +249,21 @@ namespace ReceiptOCR.API.Controllers
         public string? PhoneNumber { get; set; }
     }
 
-    public class ResetPasswordRequestDto
+    public class ForgotPasswordRequest
     {
-        public string Username { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
+        public string EmailOrUsername { get; set; } = string.Empty;
     }
 
-    public class ResetPasswordVerifyDto
+    public class VerifyResetCodeRequest
     {
-        public string Username { get; set; } = string.Empty;
-        public string OtpCode { get; set; } = string.Empty;
+        public string EmailOrUsername { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        public string EmailOrUsername { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
     }
 }
