@@ -66,7 +66,8 @@ namespace ReceiptOCR.API.Controllers
                 Role = "User",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
-                PhoneNumber = request.PhoneNumber
+                PhoneNumber = request.PhoneNumber,
+                Email = request.Email
             };
 
             _context.Users.Add(user);
@@ -83,24 +84,20 @@ namespace ReceiptOCR.API.Controllers
         [HttpPost("reset-password/request")]
         public async Task<IActionResult> RequestPasswordReset([FromBody] ResetPasswordRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.PhoneNumber))
-                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı ve telefon numarası zorunludur." });
+            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email))
+                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı ve e-posta adresi zorunludur." });
 
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username.ToLower() == request.Username.ToLower());
 
             if (user == null)
             {
-                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya telefon numarası hatalı." });
+                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya e-posta adresi hatalı." });
             }
 
-            // Normalise phone numbers
-            var dbPhone = new string(user.PhoneNumber?.Where(char.IsDigit).ToArray() ?? Array.Empty<char>());
-            var reqPhone = new string(request.PhoneNumber.Where(char.IsDigit).ToArray());
-
-            if (string.IsNullOrEmpty(dbPhone) || dbPhone != reqPhone)
+            if (string.IsNullOrEmpty(user.Email) || user.Email.Trim().ToLower() != request.Email.Trim().ToLower())
             {
-                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya telefon numarası hatalı." });
+                return BadRequest(new AuthResponse { Success = false, Error = "Kullanıcı adı veya e-posta adresi hatalı." });
             }
 
             // Generate 6-digit random code
@@ -113,13 +110,34 @@ namespace ReceiptOCR.API.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Simulating SMS gateway send
-            Console.WriteLine($"\n[SMS GATEWAY] OTP for user '{user.Username}' sent to '{user.PhoneNumber}': {otpCode}\n");
+            // Send actual email using System.Net.Mail SMTP
+            try
+            {
+                await SendResetEmailAsync(user.Email, user.Username, otpCode);
+                Console.WriteLine($"\n[EMAIL SENDER] Reset code '{otpCode}' sent to '{user.Email}'\n");
+
+                // Log to system logs
+                var logEntry = new SystemLog
+                {
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Username = user.Username,
+                    ActionType = "EMAIL_OTP",
+                    Status = "SUCCESS",
+                    Details = $"E-posta Şifre Sıfırlama Kodu gönderildi. Kod: {otpCode} (E-posta: {user.Email})"
+                };
+                _context.SystemLogs.Add(logEntry);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n[EMAIL SENDER ERROR] Failed to send email to '{user.Email}': {ex.Message}\n");
+                return StatusCode(500, new AuthResponse { Success = false, Error = $"E-posta gönderilemedi: {ex.Message}" });
+            }
 
             return Ok(new
             {
                 Success = true,
-                Message = "Doğrulama kodu telefonunuza gönderildi.",
+                Message = "Doğrulama kodu e-posta adresinize gönderildi.",
                 OtpCode = otpCode 
             });
         }
@@ -150,12 +168,69 @@ namespace ReceiptOCR.API.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Log to system logs
+            try
+            {
+                var logEntry = new SystemLog
+                {
+                    Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Username = user.Username,
+                    ActionType = "Şifre_Sıfırlama",
+                    Status = "SUCCESS",
+                    Details = "Kullanıcı şifresi E-posta doğrulaması ile başarıyla yenilendi."
+                };
+                _context.SystemLogs.Add(logEntry);
+                await _context.SaveChangesAsync();
+            }
+            catch { }
+
             return Ok(new AuthResponse
             {
                 Success = true,
                 Username = user.Username,
                 Token = GenerateJwtToken(user)
             });
+        }
+
+        private async Task SendResetEmailAsync(string email, string username, string code)
+        {
+            var fromAddress = new System.Net.Mail.MailAddress("sifreyenileme3@gmail.com", "Fiş/Fatura OCR Şifre Sıfırlama");
+            var toAddress = new System.Net.Mail.MailAddress(email);
+            const string fromPassword = "sifreyenilemesistemi3";
+            const string subject = "Şifre Sıfırlama Doğrulama Kodu";
+            string body = $@"
+            <html>
+            <body style='font-family: Arial, sans-serif; color: #333;'>
+                <h2>Merhaba {username},</h2>
+                <p>Hesabınızın şifresini yenilemek için talepte bulundunuz.</p>
+                <p>Şifre sıfırlama doğrulama kodunuz:</p>
+                <div style='background-color: #f1f5f9; padding: 15px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; border-radius: 8px; border: 1px solid #cbd5e1; margin: 20px 0; max-width: 200px;'>
+                    {code}
+                </div>
+                <p>Bu kod 5 dakika geçerlidir. Eğer bu talebi siz yapmadıysanız bu e-postayı görmezden gelebilirsiniz.</p>
+                <br/>
+                <p>Saygılarımızla,<br/>Fiş/Fatura OCR Destek Ekibi</p>
+            </body>
+            </html>";
+
+            using var smtp = new System.Net.Mail.SmtpClient
+            {
+                Host = "smtp.gmail.com",
+                Port = 587,
+                EnableSsl = true,
+                DeliveryMethod = System.Net.Mail.SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,
+                Credentials = new System.Net.NetworkCredential(fromAddress.Address, fromPassword)
+            };
+
+            using var message = new System.Net.Mail.MailMessage(fromAddress, toAddress)
+            {
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
+            await smtp.SendMailAsync(message);
         }
 
         private string HashPassword(string password)
@@ -194,17 +269,24 @@ namespace ReceiptOCR.API.Controllers
         }
     }
 
+    public class LoginRequest
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
     public class RegisterRequest
     {
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
     }
 
     public class ResetPasswordRequestDto
     {
         public string Username { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
     }
 
     public class ResetPasswordVerifyDto

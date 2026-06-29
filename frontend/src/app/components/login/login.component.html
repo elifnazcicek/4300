@@ -3,7 +3,14 @@
     <div class="login-header">
       <span class="logo-icon">🧾</span>
       <h2>SmartReceipt</h2>
-      <p>{{ mode === 'login' ? 'Lütfen devam etmek için giriş yapınız' : 'Yeni bir kullanıcı profili oluşturun' }}</p>
+      <p>
+        <ng-container [ngSwitch]="mode">
+          <span *ngSwitchCase="'login'">Lütfen devam etmek için giriş yapınız</span>
+          <span *ngSwitchCase="'register'">Yeni bir kullanıcı profili oluşturun</span>
+          <span *ngSwitchCase="'forgot'">E-posta adresinize şifre sıfırlama kodu gönderin</span>
+          <span *ngSwitchCase="'verify'">E-postanıza gelen kodu girerek yeni şifrenizi belirleyin</span>
+        </ng-container>
+      </p>
     </div>
 
     <!-- Error Message -->
@@ -17,6 +24,8 @@
     </div>
 
     <form (submit)="onSubmit(); $event.preventDefault();" class="login-form">
+      
+      <!-- Username Field (Shown in all modes) -->
       <div class="form-group">
         <label for="username">Kullanıcı Adı</label>
         <div class="input-with-icon">
@@ -28,15 +37,51 @@
             name="username" 
             required 
             placeholder="Kullanıcı adınızı girin"
+            [disabled]="loading || mode === 'verify'"
+          />
+        </div>
+      </div>
+
+      <!-- Email Field (Shown in Register & Forgot modes) -->
+      <div class="form-group" *ngIf="mode === 'register' || mode === 'forgot'">
+        <label for="email">E-posta Adresi</label>
+        <div class="input-with-icon">
+          <span class="field-icon">✉️</span>
+          <input 
+            type="email" 
+            id="email" 
+            [(ngModel)]="email" 
+            name="email" 
+            required 
+            placeholder="E-posta adresinizi girin"
             [disabled]="loading"
           />
         </div>
       </div>
 
+      <!-- Verification Code Field (Only in Verify Mode) -->
+      <div class="form-group" *ngIf="mode === 'verify'">
+        <label for="otpCode">Doğrulama Kodu</label>
+        <div class="input-with-icon">
+          <span class="field-icon">🔑</span>
+          <input 
+            type="text" 
+            id="otpCode" 
+            [(ngModel)]="otpCode" 
+            name="otpCode" 
+            required 
+            placeholder="E-postanıza gönderilen 6 haneli kodu girin"
+            [disabled]="loading"
+            maxLength="6"
+          />
+        </div>
+      </div>
 
-
-      <div class="form-group">
-        <label for="password">Şifre</label>
+      <!-- Password / New Password Field (Shown in Login, Register, Verify modes) -->
+      <div class="form-group" *ngIf="mode !== 'forgot'">
+        <label for="password">
+          {{ mode === 'verify' ? 'Yeni Şifre' : 'Şifre' }}
+        </label>
         <div class="input-with-icon">
           <span class="field-icon">🔒</span>
           <input 
@@ -45,15 +90,17 @@
             [(ngModel)]="password" 
             name="password" 
             required 
-            placeholder="Şifrenizi girin"
+            [placeholder]="mode === 'verify' ? 'Yeni şifrenizi girin' : 'Şifrenizi girin'"
             [disabled]="loading"
           />
         </div>
       </div>
 
-      <!-- Password Confirm Field (Only in Register Mode) -->
-      <div class="form-group" *ngIf="mode === 'register'">
-        <label for="confirmPassword">Şifre Tekrar</label>
+      <!-- Confirm Password Field (Only in Register & Verify modes) -->
+      <div class="form-group" *ngIf="mode === 'register' || mode === 'verify'">
+        <label for="confirmPassword">
+          {{ mode === 'verify' ? 'Yeni Şifre Tekrar' : 'Şifre Tekrar' }}
+        </label>
         <div class="input-with-icon">
           <span class="field-icon">🔒</span>
           <input 
@@ -62,10 +109,15 @@
             [(ngModel)]="confirmPassword" 
             name="confirmPassword" 
             required 
-            placeholder="Şifrenizi tekrar girin"
+            [placeholder]="mode === 'verify' ? 'Yeni şifrenizi tekrar girin' : 'Şifrenizi tekrar girin'"
             [disabled]="loading"
           />
         </div>
+      </div>
+
+      <!-- Forgot Password Link (Only in Login Mode) -->
+      <div class="login-forgot-password" *ngIf="mode === 'login'">
+        <a (click)="switchMode('forgot')" class="forgot-link">Şifremi Unuttum</a>
       </div>
 
       <!-- Remember Me Checkbox (Only in Login Mode) -->
@@ -81,21 +133,36 @@
         </label>
       </div>
 
+      <!-- Submit Button -->
       <button type="submit" class="btn btn-primary btn-block" [disabled]="loading">
         <div class="spinner spinner-sm spinner-white" *ngIf="loading"></div>
-        <span *ngIf="!loading">{{ mode === 'login' ? 'Giriş Yap' : 'Profil Oluştur' }}</span>
-        <span *ngIf="loading">{{ mode === 'login' ? 'Giriş Yapılıyor...' : 'Profil Oluşturuluyor...' }}</span>
+        <span *ngIf="!loading">
+          <ng-container [ngSwitch]="mode">
+            <span *ngSwitchCase="'login'">Giriş Yap</span>
+            <span *ngSwitchCase="'register'">Profil Oluştur</span>
+            <span *ngSwitchCase="'forgot'">Sıfırlama Kodu Gönder</span>
+            <span *ngSwitchCase="'verify'">Şifreyi Güncelle</span>
+          </ng-container>
+        </span>
+        <span *ngIf="loading">
+          <ng-container [ngSwitch]="mode">
+            <span *ngSwitchCase="'login'">Giriş Yapılıyor...</span>
+            <span *ngSwitchCase="'register'">Profil Oluşturuluyor...</span>
+            <span *ngSwitchCase="'forgot'">Kod Gönderiliyor...</span>
+            <span *ngSwitchCase="'verify'">Şifre Güncelleniyor...</span>
+          </ng-container>
+        </span>
       </button>
     </form>
 
     <div class="login-toggle-mode">
       <p *ngIf="mode === 'login'">
         Hesabınız yok mu? 
-        <a (click)="toggleMode()" class="toggle-link">Profil Oluştur</a>
+        <a (click)="switchMode('register')" class="toggle-link">Profil Oluştur</a>
       </p>
-      <p *ngIf="mode === 'register'">
+      <p *ngIf="mode === 'register' || mode === 'forgot' || mode === 'verify'">
         Zaten hesabınız var mı? 
-        <a (click)="toggleMode()" class="toggle-link">Giriş Yap</a>
+        <a (click)="switchMode('login')" class="toggle-link">Giriş Yap</a>
       </p>
     </div>
   </div>

@@ -152,6 +152,17 @@ try
 
     app.UseCors();
     
+    // Serve receipt images from the 'data' directory at '/data' route
+    var dbDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
+    Directory.CreateDirectory(dbDir);
+    
+    app.UseStaticFiles(); // default wwwroot
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(dbDir),
+        RequestPath = "/data"
+    });
+    
     // 4. JWT Yetkilendirme Middleware'leri
     app.UseAuthentication();
     app.UseAuthorization();

@@ -180,3 +180,23 @@
     text-decoration: underline;
     opacity: 0.85;
 }
+
+.login-forgot-password {
+    text-align: right;
+    margin-top: -6px;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+}
+
+.forgot-link {
+    color: var(--color-primary);
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+}
