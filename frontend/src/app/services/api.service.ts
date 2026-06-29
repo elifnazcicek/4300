@@ -62,6 +62,25 @@ export class ApiService {
   }
 
   // ==========================================
+  // USER MANAGEMENT ENDPOINTS (Admin Only)
+  // ==========================================
+  getUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/users`);
+  }
+
+  updateUserRole(id: number, role: string): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/users/${id}/role`, { role });
+  }
+
+  updateUserStatus(id: number, isActive: boolean): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/users/${id}/status`, { isActive });
+  }
+
+  deleteReceipt(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/receipts/${id}`);
+  }
+
+  // ==========================================
   // LOG ENDPOINTS (Sistem Kayıtları)
   // ==========================================
   getLogs(): Observable<string> {

@@ -79,6 +79,10 @@ export class DashboardComponent implements OnInit {
 
   constructor(private apiService: ApiService, private cdr: ChangeDetectorRef, private route: ActivatedRoute) {}
 
+  isAdmin(): boolean {
+    return localStorage.getItem('role') === 'Admin';
+  }
+
   ngOnInit(): void {
     this.clearForm();
     this.fetchReceiptsList();
@@ -562,8 +566,10 @@ export class DashboardComponent implements OnInit {
   fetchReceiptsList(): void {
     this.loadingArchive = true;
     this.cdr.detectChanges();
+    const isAdminUser = this.isAdmin();
     const currentUsername = localStorage.getItem('username') || '';
-    this.apiService.getReceipts(currentUsername).subscribe({
+    const usernameFilter = isAdminUser ? undefined : currentUsername;
+    this.apiService.getReceipts(usernameFilter).subscribe({
       next: (data) => {
         this.receiptsList = data;
         this.filterReceipts();
@@ -579,19 +585,19 @@ export class DashboardComponent implements OnInit {
 
   filterReceipts(): void {
     if (!this.searchQuery.trim()) {
-      this.filteredReceipts = this.receiptsList.slice(0, 10);
+      this.filteredReceipts = [...this.receiptsList];
       return;
     }
-    const q = this.searchQuery.toLowerCase();
+    const q = this.searchQuery.toLowerCase().trim();
     this.filteredReceipts = this.receiptsList
       .filter(r => 
-        r.merchantName.toLowerCase().includes(q) ||
-        r.receiptDate.toLowerCase().includes(q) ||
+        (r.merchantName || '').toLowerCase().includes(q) ||
+        (r.receiptDate || '').toLowerCase().includes(q) ||
         (r.receiptNo && r.receiptNo.toLowerCase().includes(q)) ||
         (r.vknTckn && r.vknTckn.toLowerCase().includes(q)) ||
+        (r.createdBy && r.createdBy.toLowerCase().includes(q)) ||
         r.id.toString().includes(q)
-      )
-      .slice(0, 10);
+      );
   }
 
   loadReceiptForEdit(id: number): void {
@@ -656,6 +662,28 @@ export class DashboardComponent implements OnInit {
       error: (err) => {
         this.showStatus('Veri okuma hatası: ' + err.message, 'error');
         this.cdr.detectChanges();
+      }
+    });
+  }
+
+  deleteReceipt(id: number): void {
+    if (!confirm('Bu masraf kaydını silmek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    this.apiService.deleteReceipt(id).subscribe({
+      next: (res) => {
+        this.showStatus('Masraf kaydı başarıyla silindi.', 'success');
+        
+        // If editing the deleted record, clear the form
+        if (this.receiptId === id) {
+          this.clearForm();
+        }
+
+        this.fetchReceiptsList();
+      },
+      error: (err) => {
+        this.showStatus('Masraf kaydı silinirken hata oluştu.', 'error');
       }
     });
   }

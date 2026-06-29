@@ -9,6 +9,11 @@
       </div>
     </div>
     
+    <nav class="header-nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">📊 Panel</a>
+      <a routerLink="/admin" routerLinkActive="active" class="nav-link" *ngIf="isAdmin()">⚙️ Yetkiler</a>
+    </nav>
+    
     <div class="header-actions">
       <div class="active-user-badge">
         👤 {{ getUsername() }}

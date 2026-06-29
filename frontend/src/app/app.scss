@@ -106,3 +106,38 @@
     vertical-align: middle;
     margin-right: 6px;
 }
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: 24px;
+    margin-right: auto;
+}
+
+.nav-link {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0 14px;
+    height: 38px;
+    border-radius: 8px;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+}
+
+.nav-link:hover {
+    color: var(--color-primary);
+    background: #f8fafc;
+}
+
+.nav-link.active {
+    color: var(--color-primary);
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+}

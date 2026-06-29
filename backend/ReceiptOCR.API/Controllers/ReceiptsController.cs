@@ -602,6 +602,36 @@ namespace ReceiptOCR.API.Controllers
             var bytes = System.IO.File.ReadAllBytes(userExcelFile);
             return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"fis_raporu_{targetUser}.xlsx");
         }
+
+        // DELETE: api/receipts/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteReceipt(int id)
+        {
+            try
+            {
+                var expense = await _context.Expenses.FindAsync(id);
+                if (expense == null)
+                {
+                    return NotFound("Kayıt bulunamadı.");
+                }
+
+                string creator = expense.KaydedenKullanici;
+                _context.Expenses.Remove(expense);
+                await _context.SaveChangesAsync();
+
+                WriteLog(creator, "Veri_Silme", "SUCCESS", $"Fiş başarıyla silindi. ID: {id}");
+
+                // Update Excel file
+                ExecuteExcelUpdate(creator);
+
+                return Ok(new { status = "success", message = "Masraf kaydı silindi." });
+            }
+            catch (Exception ex)
+            {
+                WriteLog("System", "Veri_Silme", "ERROR", $"Fiş silinirken hata: {ex.Message}");
+                return StatusCode(500, $"Veritabanından silme hatası: {ex.Message}");
+            }
+        }
     }
 
     public class OcrImageRequest

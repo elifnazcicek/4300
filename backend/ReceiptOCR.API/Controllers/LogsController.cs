@@ -3,12 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using ReceiptOCR.API.Data;
 
 namespace ReceiptOCR.API.Controllers
 {
     [ApiController]
     [Route("api/logs")]
     [Route("api/receipts/logs")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class LogsController : ControllerBase
     {
         private static readonly string BaseDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
@@ -133,6 +135,29 @@ namespace ReceiptOCR.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, $"Yedek dosyası okunurken hata oluştu: {ex.Message}");
+            }
+        }
+
+        // DELETE api/logs OR api/receipts/logs
+        [HttpDelete]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+        public IActionResult ClearLogs([FromServices] ReceiptDbContext dbContext)
+        {
+            try
+            {
+                if (System.IO.File.Exists(LogFile))
+                {
+                    System.IO.File.WriteAllText(LogFile, string.Empty);
+                }
+
+                dbContext.SystemLogs.RemoveRange(dbContext.SystemLogs);
+                dbContext.SaveChanges();
+
+                return Ok(new { status = "success", message = "Tüm sistem logları başarıyla temizlendi." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Loglar temizlenirken hata oluştu: {ex.Message}");
             }
         }
     }

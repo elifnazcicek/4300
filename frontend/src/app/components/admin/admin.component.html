@@ -1,0 +1,86 @@
+<div class="admin-container">
+  <div class="header-section">
+    <h1>⚙️ Yetkiler ve Kullanıcı Yönetimi</h1>
+    <p>Kullanıcıların sisteme erişim yetkilerini düzenleyin ve aktif/pasif durumlarını yönetin.</p>
+  </div>
+
+  <!-- Status Notification -->
+  <div *ngIf="statusMessage" class="status-banner" [class.success]="statusType === 'success'" [class.error]="statusType === 'error'">
+    {{ statusMessage }}
+  </div>
+
+  <div class="admin-grid">
+    <!-- LEFT PANEL: USER MANAGEMENT -->
+    <section class="panel-section users-panel">
+      <div class="panel-header flex-header">
+        <h2>👥 Kayıtlı Kullanıcılar</h2>
+        <span class="badge" *ngIf="!loadingUsers">{{ users.length }} Kullanıcı</span>
+      </div>
+
+      <div class="panel-content">
+        <div *ngIf="loadingUsers" class="loading-state">
+          <div class="spinner"></div>
+          <span>Kullanıcı listesi güncelleniyor...</span>
+        </div>
+
+        <div *ngIf="!loadingUsers && users.length === 0" class="empty-state">
+          Kayıtlı kullanıcı bulunamadı.
+        </div>
+
+        <div class="table-wrapper" *ngIf="!loadingUsers && users.length > 0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Ad Soyad</th>
+                <th>Kullanıcı Adı</th>
+                <th>Mevcut Rol</th>
+                <th>Durum</th>
+                <th style="text-align: right; padding-right: 16px;">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let u of users" [class.self]="u.username.toLowerCase() === 'stajyer'">
+                <td>
+                  <span class="user-name">{{ u.fullName || u.username }}</span>
+                </td>
+                <td>
+                  <code class="user-code">@{{ u.username }}</code>
+                </td>
+                <td>
+                  <span class="role-badge" [class.admin]="u.role === 'Admin'" [class.user]="u.role === 'User'">
+                    {{ u.role }}
+                  </span>
+                </td>
+                <td>
+                  <span class="status-badge" [class.active]="u.isActive" [class.inactive]="!u.isActive">
+                    {{ u.isActive ? 'Aktif' : 'Pasif' }}
+                  </span>
+                </td>
+                <td style="text-align: right; padding-right: 16px;">
+                  <div class="actions-group" *ngIf="u.username.toLowerCase() !== currentUsername.toLowerCase() && u.username.toLowerCase() !== 'stajyer'">
+                    <button 
+                      class="btn btn-sm btn-action-toggle" 
+                      [class.btn-warning-outline]="u.isActive" 
+                      [class.btn-success-outline]="!u.isActive"
+                      (click)="toggleUserActive(u)">
+                      {{ u.isActive ? 'Dondur' : 'Aktifleştir' }}
+                    </button>
+                    <button 
+                      class="btn btn-sm btn-action-toggle" 
+                      [class.btn-danger-outline]="u.role === 'Admin'" 
+                      [class.btn-primary-outline]="u.role !== 'Admin'"
+                      (click)="toggleUserRole(u)">
+                      {{ u.role === 'Admin' ? 'Yetkiyi Kaldır' : 'Yönetici Yap' }}
+                    </button>
+                  </div>
+                  <span *ngIf="u.username.toLowerCase() === 'stajyer'" class="system-locked-label">🔒 Sistem Kilidi</span>
+                  <span *ngIf="u.username.toLowerCase() === currentUsername.toLowerCase() && u.username.toLowerCase() !== 'stajyer'" class="system-locked-label">🔒 Kendi Profiliniz</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

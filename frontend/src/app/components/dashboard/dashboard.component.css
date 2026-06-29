@@ -510,11 +510,16 @@
     border-color: var(--color-primary);
 }
 
+.list-section .panel-content {
+    overflow: hidden;
+}
+
 .history-list {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 480px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 6px;
 }

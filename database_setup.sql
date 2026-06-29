@@ -131,8 +131,8 @@ BEGIN
     -- Varsayılan kullanıcıları yükle (Varsayılan şifre: 123456)
     -- Şifrenin SHA-256 hash karşılığı eklenmiştir.
     INSERT INTO [dbo].[Users] ([Username], [PasswordHash], [FullName], [Role], [IsActive], [PhoneNumber]) VALUES
-    (N'stajyer', N'8d969ee567061054a737b4d0cd200774033b700b76e9867610e120b29d4e5c7e', N'Stajyer Kullanıcı', N'Admin', 1, N'5551234567'),
-    (N'muhasebe1', N'8d969ee567061054a737b4d0cd200774033b700b76e9867610e120b29d4e5c7e', N'Ahmet Yılmaz', N'User', 1, N'5557654321');
+    (N'stajyer', N'8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', N'Stajyer Kullanıcı', N'Admin', 1, N'5551234567'),
+    (N'muhasebe1', N'8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', N'Ahmet Yılmaz', N'User', 1, N'5557654321');
 
     PRINT 'Users tablosu oluşturuldu ve varsayılan kullanıcılar eklendi.';
 END

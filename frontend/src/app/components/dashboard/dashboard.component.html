@@ -273,12 +273,18 @@
 
           <div class="archive-card" *ngFor="let r of filteredReceipts">
             <div class="card-top">
-              <span class="card-date">{{ r.receiptDate }}</span>
+              <span class="card-date">📅 {{ r.receiptDate }}</span>
+              <span class="user-tag" style="background: #eff6ff; color: var(--color-primary); font-weight: 600; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem;">
+                👤 @{{ r.createdBy }}
+              </span>
             </div>
             <div class="card-merchant">{{ r.merchantName }}</div>
             <div class="card-bottom">
               <div class="card-total">₺{{ r.totalAmount | number:'1.2-2' }}</div>
-              <button class="btn btn-primary btn-xs" (click)="loadReceiptForEdit(r.id)">Düzenle</button>
+              <div class="card-actions" style="display: flex; gap: 6px;">
+                <button class="btn btn-primary btn-xs" (click)="loadReceiptForEdit(r.id)">Düzenle</button>
+                <button class="btn btn-danger btn-xs" (click)="deleteReceipt(r.id)">Sil</button>
+              </div>
             </div>
           </div>
         </div>
