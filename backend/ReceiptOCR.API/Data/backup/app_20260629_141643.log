@@ -105,27 +105,3 @@
 2026-06-29 14:16:43 [INFO] User: edit, Action: Veri_Kayıt, Details: Yeni bir fiş kaydetme isteği alındı. Mağaza: ŞOK MARKETLER TİC.A.Ş, Tutar: 427,42 TL, Kullanıcı: edit
 2026-06-29 14:16:43 [SUCCESS] User: edit, Action: Veri_Kayıt, Details: Fiş başarıyla kaydedildi. Veritabanı ID: 31
 2026-06-29 14:16:43 [SUCCESS] User: edit, Action: Excel_Kayıt, Details: Excel dosyası başarıyla güncellendi: fis_raporu_edit.xlsx
-2026-06-29 14:16:43 [SUCCESS] User: System, Action: Db_Backup, Details: Sistem logları başarıyla backup klasörüne yedeklendi. Yedek: app_20260629_141643.log
-2026-06-29 14:16:43 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
-2026-06-29 14:16:52 [INFO] User: Guest, Action: OCR_Okuma, Details: Yeni bir fiş dosyası yükleniyor: png2pdf.pdf (application/pdf)
-2026-06-29 14:16:54 [SUCCESS] User: Guest, Action: OCR_Okuma, Details: Gemini OCR başarıyla tamamlandı (PDF Sayfa 1). Algılanan Mağaza: A101 YENI MAGAZACILIK A.S.
-2026-06-29 14:16:57 [INFO] User: edit, Action: Veri_Kayıt, Details: Yeni bir fiş kaydetme isteği alındı. Mağaza: A101 YENI MAGAZACILIK A.S., Tutar: 221 TL, Kullanıcı: edit
-2026-06-29 14:16:57 [SUCCESS] User: edit, Action: Veri_Kayıt, Details: Fiş başarıyla kaydedildi. Veritabanı ID: 33
-2026-06-29 14:16:57 [SUCCESS] User: edit, Action: Excel_Kayıt, Details: Excel dosyası başarıyla güncellendi: fis_raporu_edit.xlsx
-2026-06-29 14:16:57 [SUCCESS] User: System, Action: Db_Backup, Details: Sistem logları başarıyla backup klasörüne yedeklendi. Yedek: app_20260629_141657.log
-2026-06-29 14:16:57 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
-2026-06-29 14:17:02 [INFO] User: edit, Action: Veri_Kayıt, Details: Yeni bir fiş kaydetme isteği alındı. Mağaza: CAGRI MAGAZACILIK A.S., Tutar: 960,81 TL, Kullanıcı: edit
-2026-06-29 14:17:02 [SUCCESS] User: edit, Action: Veri_Kayıt, Details: Fiş başarıyla kaydedildi. Veritabanı ID: 34
-2026-06-29 14:17:02 [SUCCESS] User: edit, Action: Excel_Kayıt, Details: Excel dosyası başarıyla güncellendi: fis_raporu_edit.xlsx
-2026-06-29 14:17:02 [SUCCESS] User: System, Action: Db_Backup, Details: Sistem logları başarıyla backup klasörüne yedeklendi. Yedek: app_20260629_141702.log
-2026-06-29 14:17:02 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
-2026-06-29 14:17:06 [INFO] User: edit, Action: Veri_Kayıt, Details: Yeni bir fiş kaydetme isteği alındı. Mağaza: NIPA ELEKTRIK OTOMOSYO VE TIC LTD STI, Tutar: 800 TL, Kullanıcı: edit
-2026-06-29 14:17:06 [SUCCESS] User: edit, Action: Veri_Kayıt, Details: Fiş başarıyla kaydedildi. Veritabanı ID: 36
-2026-06-29 14:17:06 [SUCCESS] User: edit, Action: Excel_Kayıt, Details: Excel dosyası başarıyla güncellendi: fis_raporu_edit.xlsx
-2026-06-29 14:17:06 [SUCCESS] User: System, Action: Db_Backup, Details: Sistem logları başarıyla backup klasörüne yedeklendi. Yedek: app_20260629_141706.log
-2026-06-29 14:17:06 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
-2026-06-29 14:17:32 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 31
-2026-06-29 14:17:39 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 32
-2026-06-29 14:17:44 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 33
-2026-06-29 14:17:52 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 34
-2026-06-29 14:17:56 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 36

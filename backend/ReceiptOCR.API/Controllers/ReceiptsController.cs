@@ -137,17 +137,47 @@ namespace ReceiptOCR.API.Controllers
                     int rowIdx = 2;
                     foreach (var expense in queryData)
                     {
-                        decimal matrah = expense.ToplamTutar - expense.KdvTutari;
+                        // Check if ItemsJson has a VAT breakdown list
+                        List<VatBreakdownItem>? vatItems = null;
+                        if (!string.IsNullOrEmpty(expense.ItemsJson))
+                        {
+                            try
+                            {
+                                vatItems = System.Text.Json.JsonSerializer.Deserialize<List<VatBreakdownItem>>(expense.ItemsJson);
+                            }
+                            catch { }
+                        }
 
-                        worksheet.Cells[rowIdx, 1].Value = expense.Tarih;
-                        worksheet.Cells[rowIdx, 2].Value = expense.FirmaAdi;
-                        worksheet.Cells[rowIdx, 3].Value = expense.VknTckn ?? "";
-                        worksheet.Cells[rowIdx, 4].Value = expense.FisNo ?? "";
-                        worksheet.Cells[rowIdx, 5].Value = expense.KdvOrani;
-                        worksheet.Cells[rowIdx, 6].Value = matrah;
-                        worksheet.Cells[rowIdx, 7].Value = expense.KdvTutari;
-                        worksheet.Cells[rowIdx, 8].Value = expense.ToplamTutar;
-                        rowIdx++;
+                        if (vatItems != null && vatItems.Count > 0)
+                        {
+                            // Write a row for each VAT breakdown item
+                            foreach (var vatItem in vatItems)
+                            {
+                                worksheet.Cells[rowIdx, 1].Value = expense.Tarih;
+                                worksheet.Cells[rowIdx, 2].Value = expense.FirmaAdi;
+                                worksheet.Cells[rowIdx, 3].Value = expense.VknTckn ?? "";
+                                worksheet.Cells[rowIdx, 4].Value = expense.FisNo ?? "";
+                                worksheet.Cells[rowIdx, 5].Value = vatItem.KdvOrani;
+                                worksheet.Cells[rowIdx, 6].Value = vatItem.Matrah;
+                                worksheet.Cells[rowIdx, 7].Value = vatItem.Kdv;
+                                worksheet.Cells[rowIdx, 8].Value = vatItem.Matrah + vatItem.Kdv;
+                                rowIdx++;
+                            }
+                        }
+                        else
+                        {
+                            // Write standard single row
+                            decimal matrah = expense.ToplamTutar - expense.KdvTutari;
+                            worksheet.Cells[rowIdx, 1].Value = expense.Tarih;
+                            worksheet.Cells[rowIdx, 2].Value = expense.FirmaAdi;
+                            worksheet.Cells[rowIdx, 3].Value = expense.VknTckn ?? "";
+                            worksheet.Cells[rowIdx, 4].Value = expense.FisNo ?? "";
+                            worksheet.Cells[rowIdx, 5].Value = expense.KdvOrani;
+                            worksheet.Cells[rowIdx, 6].Value = matrah;
+                            worksheet.Cells[rowIdx, 7].Value = expense.KdvTutari;
+                            worksheet.Cells[rowIdx, 8].Value = expense.ToplamTutar;
+                            rowIdx++;
+                        }
                     }
                     // Auto fit columns
                     if (worksheet.Dimension != null)
@@ -413,21 +443,37 @@ namespace ReceiptOCR.API.Controllers
             });
         }
 
-        private Expense CreateExpenseFromDto(ReceiptSaveDto dto, int rate, decimal totalAmount, decimal taxAmount)
+        private Expense CreateExpenseFromDto(ReceiptSaveDto dto)
         {
+            var vatItems = new List<VatBreakdownItem>();
+            if (dto.Matrah1 > 0 || dto.Kdv1 > 0)
+            {
+                vatItems.Add(new VatBreakdownItem { KdvOrani = 1, Matrah = dto.Matrah1, Kdv = dto.Kdv1 });
+            }
+            if (dto.Matrah10 > 0 || dto.Kdv10 > 0)
+            {
+                vatItems.Add(new VatBreakdownItem { KdvOrani = 10, Matrah = dto.Matrah10, Kdv = dto.Kdv10 });
+            }
+            if (dto.Matrah20 > 0 || dto.Kdv20 > 0)
+            {
+                vatItems.Add(new VatBreakdownItem { KdvOrani = 20, Matrah = dto.Matrah20, Kdv = dto.Kdv20 });
+            }
+
+            var itemsJson = System.Text.Json.JsonSerializer.Serialize(vatItems);
+
             return new Expense
             {
                 FirmaAdi = dto.MerchantName,
                 Tarih = dto.ReceiptDate,
-                ToplamTutar = totalAmount,
-                KdvTutari = taxAmount,
+                ToplamTutar = dto.TotalAmount,
+                KdvTutari = dto.TaxAmount,
                 FisNo = dto.FisNo,
                 VknTckn = dto.VknTckn,
-                KdvOrani = rate,
+                KdvOrani = dto.KdvOrani,
                 KaydedenKullanici = string.IsNullOrEmpty(dto.CreatedBy) ? "default" : dto.CreatedBy,
                 CreatedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 ImagePath = dto.ImagePath,
-                ItemsJson = "[]"
+                ItemsJson = itemsJson
             };
         }
 
@@ -437,45 +483,11 @@ namespace ReceiptOCR.API.Controllers
             WriteLog(dto.CreatedBy, "Veri_Kayıt", "INFO", $"Yeni bir fiş kaydetme isteği alındı. Mağaza: {dto.MerchantName}, Tutar: {dto.TotalAmount} TL, Kullanıcı: {dto.CreatedBy}");
             try
             {
-                int savedCount = 0;
-                int primaryReceiptId = 0;
+                var exp = CreateExpenseFromDto(dto);
+                _context.Expenses.Add(exp);
+                await _context.SaveChangesAsync();
 
-                // Check and save each active KDV rate row
-                if (dto.Matrah1 > 0 || dto.Kdv1 > 0)
-                {
-                    var exp = CreateExpenseFromDto(dto, 1, dto.Matrah1 + dto.Kdv1, dto.Kdv1);
-                    _context.Expenses.Add(exp);
-                    await _context.SaveChangesAsync();
-                    primaryReceiptId = exp.Id;
-                    savedCount++;
-                }
-
-                if (dto.Matrah10 > 0 || dto.Kdv10 > 0)
-                {
-                    var exp = CreateExpenseFromDto(dto, 10, dto.Matrah10 + dto.Kdv10, dto.Kdv10);
-                    _context.Expenses.Add(exp);
-                    await _context.SaveChangesAsync();
-                    if (primaryReceiptId == 0) primaryReceiptId = exp.Id;
-                    savedCount++;
-                }
-
-                if (dto.Matrah20 > 0 || dto.Kdv20 > 0)
-                {
-                    var exp = CreateExpenseFromDto(dto, 20, dto.Matrah20 + dto.Kdv20, dto.Kdv20);
-                    _context.Expenses.Add(exp);
-                    await _context.SaveChangesAsync();
-                    if (primaryReceiptId == 0) primaryReceiptId = exp.Id;
-                    savedCount++;
-                }
-
-                if (savedCount == 0)
-                {
-                    // Fallback if all rates are zero, save as %20 with 0
-                    var exp = CreateExpenseFromDto(dto, 20, dto.TotalAmount, dto.TaxAmount);
-                    _context.Expenses.Add(exp);
-                    await _context.SaveChangesAsync();
-                    primaryReceiptId = exp.Id;
-                }
+                int primaryReceiptId = exp.Id;
 
                 WriteLog(dto.CreatedBy, "Veri_Kayıt", "SUCCESS", $"Fiş başarıyla kaydedildi. Veritabanı ID: {primaryReceiptId}");
 
@@ -514,14 +526,15 @@ namespace ReceiptOCR.API.Controllers
                     return NotFound("Fiş bulunamadı.");
                 }
 
-                int originalRate = dbExpense.KdvOrani;
-
-                // Update common header fields of the original record
+                // Update fields
                 dbExpense.FirmaAdi = dto.MerchantName;
                 dbExpense.Tarih = dto.ReceiptDate;
                 dbExpense.FisNo = dto.FisNo;
                 dbExpense.VknTckn = dto.VknTckn;
-                dbExpense.ItemsJson = "[]";
+                dbExpense.ToplamTutar = dto.TotalAmount;
+                dbExpense.KdvTutari = dto.TaxAmount;
+                dbExpense.KdvOrani = dto.KdvOrani;
+                
                 if (!string.IsNullOrEmpty(dto.ImagePath))
                 {
                     dbExpense.ImagePath = dto.ImagePath;
@@ -531,49 +544,33 @@ namespace ReceiptOCR.API.Controllers
                     dbExpense.KaydedenKullanici = dto.CreatedBy;
                 }
 
-                // Update amounts for the original record based on its KDV rate
-                if (originalRate == 1)
+                // Serialize KDV breakdown to ItemsJson
+                var vatItems = new List<VatBreakdownItem>();
+                if (dto.Matrah1 > 0 || dto.Kdv1 > 0)
                 {
-                    dbExpense.ToplamTutar = dto.Matrah1 + dto.Kdv1;
-                    dbExpense.KdvTutari = dto.Kdv1;
+                    vatItems.Add(new VatBreakdownItem { KdvOrani = 1, Matrah = dto.Matrah1, Kdv = dto.Kdv1 });
                 }
-                else if (originalRate == 10)
+                if (dto.Matrah10 > 0 || dto.Kdv10 > 0)
                 {
-                    dbExpense.ToplamTutar = dto.Matrah10 + dto.Kdv10;
-                    dbExpense.KdvTutari = dto.Kdv10;
+                    vatItems.Add(new VatBreakdownItem { KdvOrani = 10, Matrah = dto.Matrah10, Kdv = dto.Kdv10 });
                 }
-                else // 20
+                if (dto.Matrah20 > 0 || dto.Kdv20 > 0)
                 {
-                    dbExpense.ToplamTutar = dto.Matrah20 + dto.Kdv20;
-                    dbExpense.KdvTutari = dto.Kdv20;
+                    vatItems.Add(new VatBreakdownItem { KdvOrani = 20, Matrah = dto.Matrah20, Kdv = dto.Kdv20 });
                 }
-
-                // For the other rates, if they have non-zero values, create them as separate database records
-                if (originalRate != 1 && (dto.Matrah1 > 0 || dto.Kdv1 > 0))
-                {
-                    var exp = CreateExpenseFromDto(dto, 1, dto.Matrah1 + dto.Kdv1, dto.Kdv1);
-                    _context.Expenses.Add(exp);
-                }
-
-                if (originalRate != 10 && (dto.Matrah10 > 0 || dto.Kdv10 > 0))
-                {
-                    var exp = CreateExpenseFromDto(dto, 10, dto.Matrah10 + dto.Kdv10, dto.Kdv10);
-                    _context.Expenses.Add(exp);
-                }
-
-                if (originalRate != 20 && (dto.Matrah20 > 0 || dto.Kdv20 > 0))
-                {
-                    var exp = CreateExpenseFromDto(dto, 20, dto.Matrah20 + dto.Kdv20, dto.Kdv20);
-                    _context.Expenses.Add(exp);
-                }
+                dbExpense.ItemsJson = System.Text.Json.JsonSerializer.Serialize(vatItems);
 
                 await _context.SaveChangesAsync();
+
                 WriteLog(creator, "Veri_Güncelleme", "SUCCESS", $"Fiş başarıyla güncellendi. ID: {id}");
 
-                // Update Excel
+                // Update Excel file
                 ExecuteExcelUpdate(dbExpense.KaydedenKullanici);
 
-                return Ok(new { status = "success", message = "Masraf kaydı güncellendi." });
+                // Backup logs
+                ExecuteLogBackup();
+
+                return Ok(new { status = "success", message = "Fiş güncellendi." });
             }
             catch (Exception ex)
             {
@@ -661,5 +658,12 @@ namespace ReceiptOCR.API.Controllers
         public string? VknTckn { get; set; }
         public string? FisNo { get; set; }
         public List<GeminiReceiptItemResponse> Items { get; set; } = new();
+    }
+
+    public class VatBreakdownItem
+    {
+        public int KdvOrani { get; set; }
+        public decimal Matrah { get; set; }
+        public decimal Kdv { get; set; }
     }
 }

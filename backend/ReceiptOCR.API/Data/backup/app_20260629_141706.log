@@ -122,10 +122,3 @@
 2026-06-29 14:17:06 [INFO] User: edit, Action: Veri_Kayıt, Details: Yeni bir fiş kaydetme isteği alındı. Mağaza: NIPA ELEKTRIK OTOMOSYO VE TIC LTD STI, Tutar: 800 TL, Kullanıcı: edit
 2026-06-29 14:17:06 [SUCCESS] User: edit, Action: Veri_Kayıt, Details: Fiş başarıyla kaydedildi. Veritabanı ID: 36
 2026-06-29 14:17:06 [SUCCESS] User: edit, Action: Excel_Kayıt, Details: Excel dosyası başarıyla güncellendi: fis_raporu_edit.xlsx
-2026-06-29 14:17:06 [SUCCESS] User: System, Action: Db_Backup, Details: Sistem logları başarıyla backup klasörüne yedeklendi. Yedek: app_20260629_141706.log
-2026-06-29 14:17:06 [INFO] User: edit, Action: Veri_Listeleme, Details: Kayıtlı fiş listesi istendi. Kullanıcı: edit
-2026-06-29 14:17:32 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 31
-2026-06-29 14:17:39 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 32
-2026-06-29 14:17:44 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 33
-2026-06-29 14:17:52 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 34
-2026-06-29 14:17:56 [INFO] User: Guest, Action: Detay_Görüntüleme, Details: Fiş detayı istendi. ID: 36
