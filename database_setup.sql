@@ -121,7 +121,6 @@ BEGIN
         [IsActive]     BIT               NOT NULL DEFAULT 1,
         [CreatedDate]  DATETIME2(7)      NOT NULL DEFAULT GETDATE(),
         [PhoneNumber]  NVARCHAR(50)      NULL,
-        [Email]        NVARCHAR(150)     NULL,
         [SmsOtpCode]   NVARCHAR(10)      NULL,
         [SmsOtpExpiry] DATETIME2(7)      NULL,
         
@@ -131,9 +130,9 @@ BEGIN
     
     -- Varsayılan kullanıcıları yükle (Varsayılan şifre: 123456)
     -- Şifrenin SHA-256 hash karşılığı eklenmiştir.
-    INSERT INTO [dbo].[Users] ([Username], [PasswordHash], [FullName], [Role], [IsActive], [PhoneNumber], [Email]) VALUES
-    (N'stajyer', N'8d969ee567061054a737b4d0cd200774033b700b76e9867610e120b29d4e5c7e', N'Stajyer Kullanıcı', N'Admin', 1, N'5551234567', N'stajyer@sirket.com'),
-    (N'muhasebe1', N'8d969ee567061054a737b4d0cd200774033b700b76e9867610e120b29d4e5c7e', N'Ahmet Yılmaz', N'User', 1, N'5557654321', N'muhasebe1@sirket.com');
+    INSERT INTO [dbo].[Users] ([Username], [PasswordHash], [FullName], [Role], [IsActive], [PhoneNumber]) VALUES
+    (N'stajyer', N'8d969ee567061054a737b4d0cd200774033b700b76e9867610e120b29d4e5c7e', N'Stajyer Kullanıcı', N'Admin', 1, N'5551234567'),
+    (N'muhasebe1', N'8d969ee567061054a737b4d0cd200774033b700b76e9867610e120b29d4e5c7e', N'Ahmet Yılmaz', N'User', 1, N'5557654321');
 
     PRINT 'Users tablosu oluşturuldu ve varsayılan kullanıcılar eklendi.';
 END
